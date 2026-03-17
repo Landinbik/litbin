@@ -636,7 +636,7 @@ SELECT 'hello from SQL' AS message;
       go:            { compiler: 'go-1.23.2',             options: '' },
       zig:           { compiler: 'zig-0.13.0',            options: '' },
       d:             { compiler: 'dmd-2.109.1',           options: '' },
-      nim:           { compiler: 'nim-2.2.8',             options: '' },
+      nim:           { compiler: 'nim-2.2.8',             options: '', rawOptions: '--hints:off' },
       // JVM
       java:          { compiler: 'openjdk-jdk-22+36',     options: '', transform: c => c.replace(/\bpublic\s+class\b/g, 'class') },
       groovy:        { compiler: 'groovy-4.0.23',         options: '' },
@@ -689,6 +689,7 @@ SELECT 'hello from SQL' AS message;
             compiler: spec.compiler,
             code:     spec.transform ? spec.transform(code) : code,
             options:  spec.options,
+            ...(spec.rawOptions ? { 'compiler-option-raw': spec.rawOptions } : {}),
           }),
         });
 

@@ -46,6 +46,26 @@ Everything lives in `index.html`:
 - **URL size indicator**: color-coded (normal / yellow warn / red over) in the header
 - **Default content**: shown only when the hash is empty (new visit with no shared URL)
 
+## Code execution
+
+Fenced code blocks with a supported language tag get a run button. Execution goes through the [Wandbox](https://wandbox.org/) public API (`POST https://wandbox.org/api/compile.json`). No backend required.
+
+Each language is declared in the `EXEC_LANGS` map:
+
+```js
+{
+  compiler: string,       // Wandbox compiler ID
+  options: string,        // Wandbox predefined option switches
+  rawOptions?: string,    // passed as compiler-option-raw (arbitrary compiler flags)
+  transform?: fn(code)    // pre-process source before sending (e.g. Java class modifier strip)
+}
+```
+
+**Known quirks:**
+- **Nim** — uses `rawOptions: '--hints:off'` to suppress verbose build chatter (CC/Hint lines) that Wandbox returns as `compiler_error`
+- **Java** — `transform` strips `public` from `class` declarations (Wandbox requires a plain class name matching the filename)
+- **Swift, OCaml, Erlang, Elixir** — disabled (commented out); broken server-side on Wandbox
+
 ## Development
 
 No build step. Edit `index.html` and refresh the browser. To serve locally:
