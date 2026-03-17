@@ -306,6 +306,50 @@
       cursor: text;
     }
 
+    /* ── Code execution ── */
+    .code-block-wrap {
+      position: relative;
+      margin-bottom: 1em;
+    }
+    .code-block-wrap .md-body pre,
+    .code-block-wrap pre { margin-bottom: 0; }
+    .run-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 3px 11px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      opacity: 0.85;
+      transition: opacity 0.15s, filter 0.15s;
+      z-index: 1;
+    }
+    .run-btn:hover  { opacity: 1; filter: brightness(1.1); }
+    .run-btn:disabled { opacity: 0.5; cursor: default; filter: none; }
+    .code-output {
+      display: none;
+      font-family: 'SFMono-Regular', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      background: #0d1117;
+      color: #c9d1d9;
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      padding: 12px 16px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .code-output.visible { display: block; }
+    .code-output .out-err  { color: #f85149; }
+    .code-output .out-meta { color: #6e7681; font-style: italic; font-size: 12px; }
+
     /* ── Mobile overrides ── */
     @media (max-width: 700px) {
       .tab-bar { display: flex; }
@@ -356,32 +400,41 @@
     const DEFAULT = `# mdbin
 
 A markdown editor where **the document lives in the URL** — no server, no storage.
-Just edit and share the link.
+Hit **Copy URL** to share. Code blocks can be executed inline.
 
-## Quick start
+## Python
 
-1. Type in the left pane
-2. See the preview on the right
-3. Hit **Copy URL** to share
+\`\`\`python
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
 
-## Code example
+for i in range(10):
+    print(f"fib({i}) = {fib(i)}")
+\`\`\`
 
-\`\`\`js
-function greet(name) {
-  return \`Hello, \${name}!\`;
+## C
+
+\`\`\`c
+#include <stdio.h>
+
+int main() {
+    for (int i = 1; i <= 5; i++)
+        printf("hello from C, iteration %d\\n", i);
+    return 0;
 }
 \`\`\`
 
-## Table
+## Lisp
 
-| Feature | Status |
-|---------|--------|
-| URL storage | ✅ |
-| Live preview | ✅ |
-| Dark mode | ✅ |
-| Server required | ❌ |
+\`\`\`lisp
+(defun fact (n)
+  (if (<= n 1) 1 (* n (fact (- n 1)))))
 
-> **Limit:** ~200 KB of markdown fits comfortably.
+(format t "10! = ~a~%" (fact 10))
+\`\`\`
 `;
 
     const editor   = document.getElementById('editor');
@@ -415,12 +468,103 @@ function greet(name) {
     // ── Marked options ───────────────────────────────────────────────────────
     marked.use({ breaks: true, gfm: true });
 
+    // ── Code execution ───────────────────────────────────────────────────────
+    const PISTON_LANGS = {
+      python:        { lang: 'python',      file: 'main.py'   },
+      python3:       { lang: 'python',      file: 'main.py'   },
+      py:            { lang: 'python',      file: 'main.py'   },
+      c:             { lang: 'c',           file: 'main.c'    },
+      lisp:          { lang: 'common-lisp', file: 'main.lisp' },
+      'common-lisp': { lang: 'common-lisp', file: 'main.lisp' },
+      commonlisp:    { lang: 'common-lisp', file: 'main.lisp' },
+      scheme:        { lang: 'scheme',      file: 'main.scm'  },
+      scm:           { lang: 'scheme',      file: 'main.scm'  },
+    };
+
+    async function executeCode(lang, code, outEl, btn) {
+      const spec = PISTON_LANGS[lang.toLowerCase()];
+      if (!spec) return;
+
+      btn.disabled    = true;
+      btn.textContent = '⏳';
+      outEl.className = 'code-output visible';
+      outEl.innerHTML = '<span class="out-meta">Running…</span>';
+
+      try {
+        const res  = await fetch('https://emkc.org/api/v2/piston/execute', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            language: spec.lang,
+            version:  '*',
+            files:    [{ name: spec.file, content: code }],
+          }),
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { run } = await res.json();
+
+        outEl.innerHTML = '';
+        if (run.stdout) {
+          const el = document.createElement('span');
+          el.textContent = run.stdout;
+          outEl.appendChild(el);
+        }
+        if (run.stderr) {
+          const el = document.createElement('span');
+          el.className   = 'out-err';
+          el.textContent = run.stderr;
+          outEl.appendChild(el);
+        }
+        if (!run.stdout && !run.stderr) {
+          outEl.innerHTML = '<span class="out-meta">(no output)</span>';
+        }
+        if (run.code !== 0 && run.code !== null) {
+          const el = document.createElement('span');
+          el.className   = 'out-meta';
+          el.textContent = `\nexited with code ${run.code}`;
+          outEl.appendChild(el);
+        }
+      } catch(err) {
+        outEl.innerHTML = `<span class="out-err">Error: ${err.message}</span>`;
+      }
+
+      btn.disabled    = false;
+      btn.textContent = '▶ Run';
+    }
+
+    function attachRunButtons(container) {
+      container.querySelectorAll('pre code').forEach(codeEl => {
+        const langClass = [...codeEl.classList].find(c => c.startsWith('language-'));
+        if (!langClass) return;
+        const lang = langClass.slice(9);
+        if (!PISTON_LANGS[lang.toLowerCase()]) return;
+
+        const pre  = codeEl.parentElement;
+        const wrap = document.createElement('div');
+        wrap.className = 'code-block-wrap';
+        pre.replaceWith(wrap);
+        wrap.appendChild(pre);
+
+        const btn = document.createElement('button');
+        btn.className   = 'run-btn';
+        btn.textContent = '▶ Run';
+        wrap.appendChild(btn);
+
+        const outEl = document.createElement('div');
+        outEl.className = 'code-output';
+        wrap.appendChild(outEl);
+
+        btn.addEventListener('click', () => executeCode(lang, codeEl.textContent, outEl, btn));
+      });
+    }
+
     // ── Render ───────────────────────────────────────────────────────────────
     function render() {
       preview.innerHTML = marked.parse(editor.value);
-      if (typeof hljs !== 'undefined') {
+      if (typeof hljs !== 'undefined')
         preview.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
-      }
+      attachRunButtons(preview);
     }
 
     // ── Size indicator ───────────────────────────────────────────────────────
@@ -541,6 +685,7 @@ function greet(name) {
       d.innerHTML = marked.parse(md || '\u200b');
       if (typeof hljs !== 'undefined')
         d.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+      attachRunButtons(d);
       return d;
     }
 
