@@ -397,43 +397,190 @@
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1/libs/lz-string.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script>
-    const DEFAULT = `# mdbin
+    const DEFAULT = `# Language Test Page
 
-A markdown editor where **the document lives in the URL** — no server, no storage.
-Hit **Copy URL** to share. Code blocks can be executed inline.
+Hit **▶ Run** on each block to test execution. All code runs via [Wandbox](https://wandbox.org).
 
 ## Python
 
 \`\`\`python
-def fib(n):
-    a, b = 0, 1
-    for _ in range(n):
-        a, b = b, a + b
-    return a
-
-for i in range(10):
-    print(f"fib({i}) = {fib(i)}")
+print("hello from Python", 3 + 4)
 \`\`\`
 
 ## C
 
 \`\`\`c
 #include <stdio.h>
+int main() { printf("hello from C\\n"); return 0; }
+\`\`\`
 
-int main() {
-    for (int i = 1; i <= 5; i++)
-        printf("hello from C, iteration %d\\n", i);
-    return 0;
+## C++
+
+\`\`\`cpp
+#include <iostream>
+int main() { std::cout << "hello from C++\\n"; }
+\`\`\`
+
+## Common Lisp
+
+\`\`\`lisp
+(format t "hello from Common Lisp~%")
+\`\`\`
+
+## Rust
+
+\`\`\`rust
+fn main() { println!("hello from Rust"); }
+\`\`\`
+
+## Go
+
+\`\`\`go
+package main
+import "fmt"
+func main() { fmt.Println("hello from Go") }
+\`\`\`
+
+## JavaScript
+
+\`\`\`js
+console.log("hello from JavaScript")
+\`\`\`
+
+## TypeScript
+
+\`\`\`typescript
+const greet = (name: string): string => \`hello from \${name}\`;
+console.log(greet("TypeScript"));
+\`\`\`
+
+## Ruby
+
+\`\`\`ruby
+puts "hello from Ruby"
+\`\`\`
+
+## Java
+
+\`\`\`java
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("hello from Java");
+    }
 }
 \`\`\`
 
-## Lisp
+## Haskell
 
-\`\`\`lisp
-(defun fact (n)
-  (if (<= n 1) 1 (* n (fact (- n 1)))))
+\`\`\`haskell
+main :: IO ()
+main = putStrLn "hello from Haskell"
+\`\`\`
 
-(format t "10! = ~a~%" (fact 10))
+## OCaml
+
+\`\`\`ocaml
+let () = print_endline "hello from OCaml"
+\`\`\`
+
+## Bash
+
+\`\`\`bash
+echo "hello from Bash"
+\`\`\`
+
+## Lua
+
+\`\`\`lua
+print("hello from Lua")
+\`\`\`
+
+## PHP
+
+\`\`\`php
+<?php echo "hello from PHP\\n";
+\`\`\`
+
+## Perl
+
+\`\`\`perl
+print "hello from Perl\\n";
+\`\`\`
+
+## Swift
+
+\`\`\`swift
+print("hello from Swift")
+\`\`\`
+
+## Elixir
+
+\`\`\`elixir
+IO.puts "hello from Elixir"
+\`\`\`
+
+## Erlang
+
+\`\`\`erlang
+-module(main).
+-export([main/0]).
+main() -> io:format("hello from Erlang~n").
+\`\`\`
+
+## R
+
+\`\`\`r
+cat("hello from R\\n")
+\`\`\`
+
+## Julia
+
+\`\`\`julia
+println("hello from Julia")
+\`\`\`
+
+## Zig
+
+\`\`\`zig
+const std = @import("std");
+pub fn main() !void {
+    const stdout = std.io.getStdOut().writer();
+    try stdout.print("hello from Zig\\n", .{});
+}
+\`\`\`
+
+## Nim
+
+\`\`\`nim
+echo "hello from Nim"
+\`\`\`
+
+## C#
+
+\`\`\`csharp
+using System;
+class Program { static void Main() { Console.WriteLine("hello from C#"); } }
+\`\`\`
+
+## D
+
+\`\`\`d
+import std.stdio;
+void main() { writeln("hello from D"); }
+\`\`\`
+
+## Pascal
+
+\`\`\`pascal
+begin
+  writeln('hello from Pascal');
+end.
+\`\`\`
+
+## SQL
+
+\`\`\`sql
+SELECT 'hello from SQL' AS message;
 \`\`\`
 `;
 
@@ -468,21 +615,68 @@ int main() {
     // ── Marked options ───────────────────────────────────────────────────────
     marked.use({ breaks: true, gfm: true });
 
-    // ── Code execution ───────────────────────────────────────────────────────
-    const PISTON_LANGS = {
-      python:        { lang: 'python',      file: 'main.py'   },
-      python3:       { lang: 'python',      file: 'main.py'   },
-      py:            { lang: 'python',      file: 'main.py'   },
-      c:             { lang: 'c',           file: 'main.c'    },
-      lisp:          { lang: 'common-lisp', file: 'main.lisp' },
-      'common-lisp': { lang: 'common-lisp', file: 'main.lisp' },
-      commonlisp:    { lang: 'common-lisp', file: 'main.lisp' },
-      scheme:        { lang: 'scheme',      file: 'main.scm'  },
-      scm:           { lang: 'scheme',      file: 'main.scm'  },
+    // ── Code execution (Wandbox API) ─────────────────────────────────────────
+    const EXEC_LANGS = {
+      // Python
+      python:        { compiler: 'cpython-3.13.8',        options: '' },
+      python3:       { compiler: 'cpython-3.13.8',        options: '' },
+      py:            { compiler: 'cpython-3.13.8',        options: '' },
+      // C / C++
+      c:             { compiler: 'gcc-head-c',            options: '-std=c11 -lm' },
+      cpp:           { compiler: 'gcc-head',              options: '-std=c++23' },
+      'c++':         { compiler: 'gcc-head',              options: '-std=c++23' },
+      cxx:           { compiler: 'gcc-head',              options: '-std=c++23' },
+      // Lisp
+      lisp:          { compiler: 'clisp-2.49',            options: '' },
+      'common-lisp': { compiler: 'clisp-2.49',            options: '' },
+      commonlisp:    { compiler: 'clisp-2.49',            options: '' },
+      // Systems
+      rust:          { compiler: 'rust-1.82.0',           options: '' },
+      rs:            { compiler: 'rust-1.82.0',           options: '' },
+      go:            { compiler: 'go-1.23.2',             options: '' },
+      zig:           { compiler: 'zig-0.13.0',            options: '' },
+      d:             { compiler: 'dmd-2.109.1',           options: '' },
+      nim:           { compiler: 'nim-2.2.8',             options: '' },
+      // JVM
+      java:          { compiler: 'openjdk-jdk-22+36',     options: '', transform: c => c.replace(/\bpublic\s+class\b/g, 'class') },
+      groovy:        { compiler: 'groovy-4.0.23',         options: '' },
+      // Scripting
+      javascript:    { compiler: 'nodejs-20.17.0',        options: '' },
+      js:            { compiler: 'nodejs-20.17.0',        options: '' },
+      typescript:    { compiler: 'typescript-5.6.2',      options: '' },
+      ts:            { compiler: 'typescript-5.6.2',      options: '' },
+      ruby:          { compiler: 'ruby-3.4.1',            options: '' },
+      rb:            { compiler: 'ruby-3.4.1',            options: '' },
+      php:           { compiler: 'php-8.3.12',            options: '' },
+      perl:          { compiler: 'perl-5.42.0',           options: '' },
+      pl:            { compiler: 'perl-5.42.0',           options: '' },
+      lua:           { compiler: 'lua-5.4.7',             options: '' },
+      bash:          { compiler: 'bash',                  options: '' },
+      sh:            { compiler: 'bash',                  options: '' },
+      // Functional
+      haskell:       { compiler: 'ghc-9.10.1',            options: '' },
+      hs:            { compiler: 'ghc-9.10.1',            options: '' },
+      ocaml:         { compiler: 'ocaml-4.14.2',           options: '' },
+      ml:            { compiler: 'ocaml-4.14.2',           options: '' },
+      erlang:        { compiler: 'erlang-27.1',           options: '' },
+      erl:           { compiler: 'erlang-27.1',           options: '' },
+      elixir:        { compiler: 'elixir-1.16.3',         options: '' },
+      ex:            { compiler: 'elixir-1.16.3',         options: '' },
+      // Other
+      swift:         { compiler: 'swift-5.10.1',          options: '' },
+      r:             { compiler: 'r-4.4.1',               options: '' },
+      julia:         { compiler: 'julia-1.10.5',          options: '' },
+      jl:            { compiler: 'julia-1.10.5',          options: '' },
+      pascal:        { compiler: 'fpc-3.2.2',             options: '' },
+      pas:           { compiler: 'fpc-3.2.2',             options: '' },
+      csharp:        { compiler: 'mono-6.12.0.199',       options: '' },
+      'c#':          { compiler: 'mono-6.12.0.199',       options: '' },
+      cs:            { compiler: 'mono-6.12.0.199',       options: '' },
+      sql:           { compiler: 'sqlite-3.46.1',         options: '' },
     };
 
     async function executeCode(lang, code, outEl, btn) {
-      const spec = PISTON_LANGS[lang.toLowerCase()];
+      const spec = EXEC_LANGS[lang.toLowerCase()];
       if (!spec) return;
 
       btn.disabled    = true;
@@ -491,38 +685,52 @@ int main() {
       outEl.innerHTML = '<span class="out-meta">Running…</span>';
 
       try {
-        const res  = await fetch('https://emkc.org/api/v2/piston/execute', {
+        const res = await fetch('https://wandbox.org/api/compile.json', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
-            language: spec.lang,
-            version:  '*',
-            files:    [{ name: spec.file, content: code }],
+            compiler: spec.compiler,
+            code:     spec.transform ? spec.transform(code) : code,
+            options:  spec.options,
           }),
         });
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const { run } = await res.json();
+        const data = await res.json();
 
         outEl.innerHTML = '';
-        if (run.stdout) {
-          const el = document.createElement('span');
-          el.textContent = run.stdout;
-          outEl.appendChild(el);
-        }
-        if (run.stderr) {
+
+        // Compiler errors (syntax errors etc.)
+        if (data.compiler_error) {
           const el = document.createElement('span');
           el.className   = 'out-err';
-          el.textContent = run.stderr;
+          el.textContent = data.compiler_error;
           outEl.appendChild(el);
         }
-        if (!run.stdout && !run.stderr) {
+
+        // Program stdout
+        if (data.program_output) {
+          const el = document.createElement('span');
+          el.textContent = data.program_output;
+          outEl.appendChild(el);
+        }
+
+        // Program stderr
+        if (data.program_error) {
+          const el = document.createElement('span');
+          el.className   = 'out-err';
+          el.textContent = data.program_error;
+          outEl.appendChild(el);
+        }
+
+        if (!data.compiler_error && !data.program_output && !data.program_error) {
           outEl.innerHTML = '<span class="out-meta">(no output)</span>';
         }
-        if (run.code !== 0 && run.code !== null) {
+
+        if (data.status && data.status !== '0') {
           const el = document.createElement('span');
           el.className   = 'out-meta';
-          el.textContent = `\nexited with code ${run.code}`;
+          el.textContent = `\nexited with code ${data.status}`;
           outEl.appendChild(el);
         }
       } catch(err) {
@@ -538,7 +746,7 @@ int main() {
         const langClass = [...codeEl.classList].find(c => c.startsWith('language-'));
         if (!langClass) return;
         const lang = langClass.slice(9);
-        if (!PISTON_LANGS[lang.toLowerCase()]) return;
+        if (!EXEC_LANGS[lang.toLowerCase()]) return;
 
         const pre  = codeEl.parentElement;
         const wrap = document.createElement('div');
