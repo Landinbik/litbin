@@ -166,34 +166,35 @@
       overflow-y: auto;
       padding: 20px 28px 40px;
     }
-    #preview > *:first-child { margin-top: 0 !important; }
 
-    /* GitHub-flavored prose */
-    #preview h1, #preview h2 {
+    /* GitHub-flavored prose — shared by preview and live blocks */
+    .md-body > *:first-child { margin-top: 0 !important; }
+
+    .md-body h1, .md-body h2 {
       border-bottom: 1px solid var(--border);
       padding-bottom: .3em;
     }
-    #preview h1 { font-size: 2em;    margin: 1.5em 0 .5em; }
-    #preview h2 { font-size: 1.5em;  margin: 1.5em 0 .5em; }
-    #preview h3 { font-size: 1.25em; margin: 1.5em 0 .5em; }
-    #preview h4, #preview h5, #preview h6 { margin: 1.2em 0 .5em; }
+    .md-body h1 { font-size: 2em;    margin: 1.5em 0 .5em; }
+    .md-body h2 { font-size: 1.5em;  margin: 1.5em 0 .5em; }
+    .md-body h3 { font-size: 1.25em; margin: 1.5em 0 .5em; }
+    .md-body h4, .md-body h5, .md-body h6 { margin: 1.2em 0 .5em; }
 
-    #preview p  { margin-bottom: 1em; line-height: 1.75; }
-    #preview a  { color: var(--accent); }
-    #preview a:hover { text-decoration: underline; }
+    .md-body p  { margin-bottom: 1em; line-height: 1.75; }
+    .md-body a  { color: var(--accent); }
+    .md-body a:hover { text-decoration: underline; }
 
-    #preview ul, #preview ol { margin-bottom: 1em; padding-left: 2em; }
-    #preview li { margin-bottom: .3em; line-height: 1.75; }
-    #preview li > ul, #preview li > ol { margin-bottom: 0; margin-top: .3em; }
+    .md-body ul, .md-body ol { margin-bottom: 1em; padding-left: 2em; }
+    .md-body li { margin-bottom: .3em; line-height: 1.75; }
+    .md-body li > ul, .md-body li > ol { margin-bottom: 0; margin-top: .3em; }
 
-    #preview blockquote {
+    .md-body blockquote {
       border-left: 4px solid var(--border);
       padding: 0 1em;
       color: var(--text-muted);
       margin-bottom: 1em;
     }
 
-    #preview code {
+    .md-body code {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 4px;
@@ -201,7 +202,7 @@
       font-size: .875em;
       font-family: 'SFMono-Regular', monospace;
     }
-    #preview pre {
+    .md-body pre {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 6px;
@@ -209,26 +210,26 @@
       overflow-x: auto;
       margin-bottom: 1em;
     }
-    #preview pre code {
+    .md-body pre code {
       background: none;
       border: none;
       padding: 0;
       font-size: .85em;
     }
 
-    #preview table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
-    #preview th, #preview td {
+    .md-body table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+    .md-body th, .md-body td {
       border: 1px solid var(--border);
       padding: 7px 13px;
       text-align: left;
     }
-    #preview th { background: var(--surface); font-weight: 600; }
-    #preview tr:nth-child(even) td { background: var(--surface); }
+    .md-body th { background: var(--surface); font-weight: 600; }
+    .md-body tr:nth-child(even) td { background: var(--surface); }
 
-    #preview img  { max-width: 100%; border-radius: 4px; }
-    #preview hr   { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
+    .md-body img  { max-width: 100%; border-radius: 4px; }
+    .md-body hr   { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
 
-    #preview input[type="checkbox"] { margin-right: 6px; }
+    .md-body input[type="checkbox"] { margin-right: 6px; }
 
     /* ── Toast ── */
     #toast {
@@ -250,6 +251,61 @@
     }
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
+    /* ── Live pane ── */
+    #livePane {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+    #liveContent {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 40px 28px 160px;
+      width: 100%;
+    }
+    .live-block {
+      border-radius: 5px;
+      padding: 2px 8px;
+      margin: 0 -8px;
+      cursor: text;
+      min-height: 1.4em;
+      transition: background 0.1s;
+    }
+    .live-block:hover { background: var(--surface); }
+    /* Suppress inner margins — spacing comes from explicit spacer divs */
+    .live-block > *:first-child { margin-top: 0 !important; }
+    .live-block > *:last-child  { margin-bottom: 0 !important; }
+    .live-spacer {
+      height: 1.5em;
+      cursor: text;
+      margin: 0 -8px;
+      border-radius: 5px;
+    }
+    .live-spacer:hover { background: var(--surface); }
+    .live-ta {
+      display: block;
+      width: calc(100% + 16px);
+      margin: 0 -8px;
+      border: none;
+      outline: none;
+      resize: none;
+      overflow: hidden;
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'SFMono-Regular', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 14px;
+      line-height: 1.65;
+      padding: 4px 8px;
+      border-radius: 5px;
+      border-left: 3px solid var(--accent);
+      caret-color: var(--accent);
+    }
+    .live-bottom {
+      min-height: 120px;
+      cursor: text;
+    }
+
     /* ── Mobile overrides ── */
     @media (max-width: 700px) {
       .tab-bar { display: flex; }
@@ -265,6 +321,7 @@
     <a class="logo" href="/">mdbin</a>
     <div class="spacer"></div>
     <span id="urlSize"></span>
+    <button class="btn" id="modeBtn">Live</button>
     <button class="btn" id="themeBtn">Dark</button>
     <button class="btn primary" id="shareBtn">Copy URL</button>
   </header>
@@ -282,9 +339,13 @@
     <div id="divider"></div>
     <div class="pane" id="previewPane">
       <div class="pane-label">Preview</div>
-      <div id="preview"></div>
+      <div id="preview" class="md-body"></div>
     </div>
   </main>
+
+  <div id="livePane">
+    <div id="liveContent"></div>
+  </div>
 
   <div id="toast"></div>
 
@@ -350,6 +411,9 @@ function greet(name) {
     // ── Codec ────────────────────────────────────────────────────────────────
     const encode = t => LZString.compressToEncodedURIComponent(t);
     const decode = h => LZString.decompressFromEncodedURIComponent(h) || '';
+
+    // ── Marked options ───────────────────────────────────────────────────────
+    marked.use({ breaks: true, gfm: true });
 
     // ── Render ───────────────────────────────────────────────────────────────
     function render() {
@@ -428,6 +492,229 @@ function greet(name) {
       divider.classList.remove('active');
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+    });
+
+    // ── Live mode (segment-based) ─────────────────────────────────────────────
+    // Each segment is {type:'block', text:string} or {type:'blank'}
+    // Blank lines are explicit spacer divs — this preserves raw whitespace visually.
+    const modeBtn     = document.getElementById('modeBtn');
+    const livePane    = document.getElementById('livePane');
+    const liveContent = document.getElementById('liveContent');
+    const mainEl      = document.querySelector('main');
+
+    let liveMode      = false;
+    let liveSegs      = [];
+    let liveActiveIdx = null; // index of active block seg (always type:'block')
+    let nextActiveIdx = null; // set on mousedown so blur knows where to go next
+    let liveCursorPos = null; // cursor position to restore after re-render
+
+    function segmentize(md) {
+      const lines = md.split('\n');
+      const segs = [];
+      let cur = [], fence = false;
+      for (const line of lines) {
+        if (/^\s*```/.test(line)) fence = !fence;
+        if (!fence && line === '') {
+          if (cur.length) { segs.push({ type: 'block', text: cur.join('\n') }); cur = []; }
+          segs.push({ type: 'blank' });
+        } else {
+          cur.push(line);
+        }
+      }
+      if (cur.length) segs.push({ type: 'block', text: cur.join('\n') });
+      return segs.length ? segs : [{ type: 'block', text: '' }];
+    }
+
+    function joinSegs() {
+      return liveSegs.map(s => s.type === 'blank' ? '' : s.text).join('\n');
+    }
+
+    // Find nearest block seg relative to index, dir = 1 (forward) or -1 (backward)
+    function nearestBlock(from, dir) {
+      for (let i = from + dir; i >= 0 && i < liveSegs.length; i += dir)
+        if (liveSegs[i].type === 'block') return i;
+      return null;
+    }
+
+    function parsedDiv(md) {
+      const d = document.createElement('div');
+      d.innerHTML = marked.parse(md || '\u200b');
+      if (typeof hljs !== 'undefined')
+        d.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+      return d;
+    }
+
+    function activate(idx) {
+      liveActiveIdx = idx;
+      nextActiveIdx = null;
+      renderLive();
+    }
+
+    function renderLive() {
+      liveContent.innerHTML = '';
+
+      liveSegs.forEach((seg, i) => {
+        if (seg.type === 'blank') {
+          const sp = document.createElement('div');
+          sp.className = 'live-spacer';
+          sp.addEventListener('mousedown', () => {
+            nextActiveIdx = nearestBlock(i, -1) ?? nearestBlock(i, 1);
+          });
+          sp.addEventListener('click', () => {
+            if (liveActiveIdx === null) activate(nearestBlock(i, -1) ?? nearestBlock(i, 1));
+          });
+          liveContent.appendChild(sp);
+          return;
+        }
+
+        // Block segment
+        if (i === liveActiveIdx) {
+          const ta = document.createElement('textarea');
+          ta.className = 'live-ta';
+          ta.value = seg.text;
+          ta.spellcheck = false;
+
+          ta.addEventListener('input', () => {
+            liveSegs[i] = { type: 'block', text: ta.value };
+            const val = ta.value, cursor = ta.selectionStart;
+            const nl2 = val.indexOf('\n\n');
+
+            if (nl2 !== -1) {
+              // Split on double-newline immediately
+              const before = val.slice(0, nl2);
+              const rest   = val.slice(nl2 + 2);
+              const xtra   = rest.match(/^\n*/)[0].length; // extra blank lines
+              const after  = rest.slice(xtra);
+
+              const newSegs = [];
+              if (before !== '') newSegs.push({ type: 'block', text: before });
+              newSegs.push({ type: 'blank' });
+              for (let e = 0; e < xtra; e++) newSegs.push({ type: 'blank' });
+              newSegs.push({ type: 'block', text: after });
+
+              liveSegs.splice(i, 1, ...newSegs);
+
+              const goNext = cursor > nl2 + 1 + xtra;
+              liveActiveIdx = i + (goNext ? newSegs.length - 1 : 0);
+              liveCursorPos = goNext ? cursor - nl2 - 2 - xtra : Math.min(cursor, before.length);
+              renderLive();
+            } else {
+              ta.style.height = '0';
+              ta.style.height = ta.scrollHeight + 'px';
+            }
+            syncFromLive();
+          });
+
+          ta.addEventListener('keydown', e => {
+            const pos = ta.selectionStart, val = ta.value;
+
+            if (e.key === 'Backspace' && pos === 0 && ta.selectionEnd === 0) {
+              const prev = nearestBlock(i, -1);
+              if (prev !== null) {
+                e.preventDefault();
+                const prevText = liveSegs[prev].text;
+                const joinAt   = prevText.length;
+                liveSegs[prev] = { type: 'block', text: prevText + (prevText && val ? '\n' : '') + val };
+                liveSegs.splice(prev + 1, i - prev); // remove blanks + current block
+                liveActiveIdx = prev;
+                liveCursorPos = joinAt + (prevText ? 1 : 0);
+                renderLive();
+                syncFromLive();
+              }
+            } else if (e.key === 'ArrowUp') {
+              const firstNl = val.indexOf('\n');
+              if (firstNl === -1 || pos <= firstNl) {
+                const prev = nearestBlock(i, -1);
+                if (prev !== null) {
+                  e.preventDefault();
+                  liveSegs[i] = { type: 'block', text: val };
+                  liveActiveIdx = prev;
+                  liveCursorPos = liveSegs[prev].text.length;
+                  renderLive();
+                }
+              }
+            } else if (e.key === 'ArrowDown') {
+              const lastNl = val.lastIndexOf('\n');
+              if (lastNl === -1 || pos > lastNl) {
+                const next = nearestBlock(i, 1);
+                if (next !== null) {
+                  e.preventDefault();
+                  liveSegs[i] = { type: 'block', text: val };
+                  liveActiveIdx = next;
+                  liveCursorPos = 0;
+                  renderLive();
+                }
+              }
+            } else if (e.key === 'Escape') {
+              ta.blur();
+            }
+          });
+
+          ta.addEventListener('blur', () => {
+            liveSegs[i] = { type: 'block', text: ta.value };
+            liveActiveIdx = nextActiveIdx;
+            nextActiveIdx = null;
+            renderLive();
+            syncFromLive();
+          });
+
+          liveContent.appendChild(ta);
+          requestAnimationFrame(() => {
+            ta.style.height = '0';
+            ta.style.height = ta.scrollHeight + 'px';
+            ta.focus();
+            const p = liveCursorPos !== null ? liveCursorPos : ta.value.length;
+            ta.setSelectionRange(p, p);
+            liveCursorPos = null;
+          });
+
+        } else {
+          const wrap = document.createElement('div');
+          wrap.className = 'live-block md-body';
+          wrap.append(...parsedDiv(seg.text).childNodes);
+          wrap.addEventListener('mousedown', () => { nextActiveIdx = i; });
+          wrap.addEventListener('click', () => { if (liveActiveIdx === null) activate(i); });
+          liveContent.appendChild(wrap);
+        }
+      });
+
+      // Bottom padding area — activates last block
+      const last = nearestBlock(liveSegs.length, -1);
+      const bottom = document.createElement('div');
+      bottom.className = 'live-bottom';
+      bottom.addEventListener('mousedown', () => { nextActiveIdx = last; });
+      bottom.addEventListener('click', () => { if (liveActiveIdx === null) activate(last); });
+      liveContent.appendChild(bottom);
+    }
+
+    function syncFromLive() {
+      editor.value = joinSegs();
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        try {
+          const encoded = encode(editor.value);
+          history.replaceState(null, '', '#' + encoded);
+          updateSize(encoded);
+        } catch(e) {}
+      }, 400);
+    }
+
+    modeBtn.addEventListener('click', () => {
+      liveMode = !liveMode;
+      if (liveMode) {
+        liveSegs      = segmentize(editor.value);
+        liveActiveIdx = null;
+        mainEl.style.display   = 'none';
+        livePane.style.display = 'flex';
+        modeBtn.textContent    = 'Split';
+        renderLive();
+      } else {
+        editor.value           = joinSegs();
+        render();
+        livePane.style.display = 'none';
+        mainEl.style.display   = 'flex';
+        modeBtn.textContent    = 'Live';
+      }
     });
 
     // ── Mobile tabs ──────────────────────────────────────────────────────────
