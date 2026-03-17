@@ -656,14 +656,11 @@ SELECT 'hello from SQL' AS message;
       // Functional
       haskell:       { compiler: 'ghc-9.10.1',            options: '' },
       hs:            { compiler: 'ghc-9.10.1',            options: '' },
-      ocaml:         { compiler: 'ocaml-4.14.2',           options: '' },
-      ml:            { compiler: 'ocaml-4.14.2',           options: '' },
-      erlang:        { compiler: 'erlang-27.1',           options: '' },
-      erl:           { compiler: 'erlang-27.1',           options: '' },
-      elixir:        { compiler: 'elixir-1.16.3',         options: '' },
-      ex:            { compiler: 'elixir-1.16.3',         options: '' },
+      // ocaml: broken on Wandbox (opam missing server-side)
+      // erlang: broken on Wandbox (file size limit exceeded server-side)
+      // elixir: broken on Wandbox (file size limit exceeded server-side)
+      // swift: broken on Wandbox (catatonit missing server-side)
       // Other
-      swift:         { compiler: 'swift-5.10.1',          options: '' },
       r:             { compiler: 'r-4.4.1',               options: '' },
       julia:         { compiler: 'julia-1.10.5',          options: '' },
       jl:            { compiler: 'julia-1.10.5',          options: '' },
