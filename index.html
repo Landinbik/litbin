@@ -180,6 +180,25 @@
     #divider:hover, #divider.active { background: var(--accent); }
 
     /* ── Editor ── */
+    .editor-wrap {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    #lineNums {
+      width: 40px;
+      flex-shrink: 0;
+      padding: 16px 8px 16px 0;
+      text-align: right;
+      font-family: 'SFMono-Regular', 'Cascadia Code', 'Consolas', 'Liberation Mono', monospace;
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+      user-select: none;
+    }
     #editor {
       flex: 1;
       width: 100%;
@@ -428,7 +447,10 @@
   <main>
     <div class="pane" id="editorPane">
       <div class="pane-label">Markdown</div>
-      <textarea id="editor" spellcheck="false" placeholder="Write some markdown…"></textarea>
+      <div class="editor-wrap">
+        <div id="lineNums"></div>
+        <textarea id="editor" spellcheck="false" placeholder="Write some markdown…"></textarea>
+      </div>
     </div>
     <div id="divider"></div>
     <div class="pane" id="previewPane">
@@ -783,6 +805,16 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       });
     }
 
+    // ── Line numbers ────────────────────────────────────────────────────────
+    const lineNums = document.getElementById('lineNums');
+    function updateLineNums() {
+      const count = editor.value.split('\n').length;
+      const nums = [];
+      for (let i = 1; i <= count; i++) nums.push(i);
+      lineNums.textContent = nums.join('\n');
+    }
+    editor.addEventListener('scroll', () => { lineNums.scrollTop = editor.scrollTop; });
+
     // ── Render ───────────────────────────────────────────────────────────────
     function render() {
       preview.innerHTML = marked.parse(editor.value);
@@ -791,6 +823,7 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       attachRunButtons(preview);
       renderMermaid(preview);
       updateWordCount();
+      updateLineNums();
     }
 
     // ── Settings ─────────────────────────────────────────────────────────────
