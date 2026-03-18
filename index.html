@@ -818,7 +818,7 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       const words = text ? text.split(/\s+/).length : 0;
       const mins = Math.max(1, Math.round(words / 230));
       wordCountEl.textContent = words + ' words · ' + mins + ' min read';
-      wordCountEl.style.display = '';
+      wordCountEl.style.display = 'inline';
     }
 
     // ── Size indicator ───────────────────────────────────────────────────────
