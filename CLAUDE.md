@@ -66,6 +66,21 @@ Each language is declared in the `EXEC_LANGS` map:
 - **Java** — `transform` strips `public` from `class` declarations (Wandbox requires a plain class name matching the filename)
 - **Swift, OCaml, Erlang, Elixir** — disabled (commented out); broken server-side on Wandbox
 
+### Syntax highlighting
+
+The `highlight.min.js` common bundle covers most languages. Languages missing from the bundle are loaded as standalone modules from cdnjs:
+
+| Module | Languages highlighted |
+|---|---|
+| `lisp.min.js` | `lisp`, `common-lisp` |
+| `haskell.min.js` | `haskell`, `hs` |
+| `ocaml.min.js` | `ocaml` |
+| `julia.min.js` | `julia`, `jl` |
+| `nim.min.js` | `nim` |
+| `d.min.js` | `d` |
+
+**No hljs grammar available** (as of hljs 11.9.0): Zig, Pascal.
+
 ## Development
 
 No build step. Edit `index.html` and refresh the browser. To serve locally:
