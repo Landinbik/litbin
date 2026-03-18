@@ -995,6 +995,22 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       if (_drawingsFolded) {
         if ((_foldedData.get(id) || '').trim() === sceneJson) return;
         _foldedData.set(id, sceneJson);
+        // Update fold placeholder with new element count
+        let count = -1;
+        const newCount = Array.from(elements).length;
+        const updated = editor.value.replace(
+          excalidrawBlockRe(),
+          (match) => {
+            count++;
+            if (count === id) {
+              return '```excalidraw\n\u25C6 ' + newCount + ' element' + (newCount !== 1 ? 's' : '') + ' (folded)\n```';
+            }
+            return match;
+          }
+        );
+        if (updated !== editor.value) {
+          editor.value = updated;
+        }
       } else {
         let count = -1;
         const updated = editor.value.replace(
