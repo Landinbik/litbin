@@ -24,6 +24,7 @@ Ideas for future improvements. None are committed to.
 - ~~**Docs modal**~~ — `?` button in header opens full feature reference (languages, sort_print implementations, limits, etc.)
 - ~~**PDF export**~~ — "PDF" button calls `window.print()`; `@media print` CSS hides everything except `#preview`; `@page` sets 1.5 cm margins
 - ~~**Viewer mode**~~ — "View" button / `?view` URL param hides editor and all controls except Theme; preview goes fullscreen; "Edit" button exits; shareable URL preserves `?view`
+- ~~**Slides mode**~~ — "Slides" button enters fullscreen presentation; split on `---`, navigate with arrow keys or buttons, Esc to exit
 
 ---
 

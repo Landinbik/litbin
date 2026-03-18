@@ -479,6 +479,27 @@
     .cmd-item:hover { background:var(--surface); }
     .cmd-item.selected { background:var(--accent); color:white; }
 
+    /* ── Slides mode ── */
+    .slides-overlay { display:none; position:fixed; inset:0; background:var(--bg); z-index:2000; flex-direction:column; }
+    .slides-overlay.open { display:flex; }
+    .slides-header { display:flex; align-items:center; justify-content:space-between; height:48px; background:var(--header-bg); color:var(--header-text); padding:0 14px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .slides-title { font-weight:600; font-size:15px; }
+    .slides-counter { font-size:12px; color:var(--text-muted); }
+    .slides-exit { background:none; border:none; font-size:18px; cursor:pointer; color:var(--header-text); padding:4px 8px; }
+    .slides-exit:hover { opacity:0.8; }
+    .slides-content { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .slides-slide { width:100%; height:100%; overflow-y:auto; padding:40px; display:none; }
+    .slides-slide.active { display:block; }
+    .slides-slide .md-body { max-width:90%; margin:0 auto; font-size:18px; line-height:1.6; }
+    .slides-slide .md-body h1 { font-size:48px; margin-bottom:0.5em; }
+    .slides-slide .md-body h2 { font-size:36px; margin-bottom:0.4em; margin-top:0.8em; }
+    .slides-slide .md-body h3 { font-size:28px; margin-bottom:0.4em; margin-top:0.6em; }
+    .slides-slide .md-body p { margin-bottom:1em; }
+    .slides-nav { display:flex; align-items:center; justify-content:space-between; height:48px; background:var(--header-bg); color:var(--header-text); padding:0 14px; border-top:1px solid var(--border); flex-shrink:0; }
+    .slides-nav button { background:none; border:none; color:var(--header-text); cursor:pointer; padding:6px 12px; font-size:16px; }
+    .slides-nav button:hover { opacity:0.8; }
+    .slides-nav button:disabled { opacity:0.4; cursor:not-allowed; }
+
     /* ── Mobile overrides ── */
     @media (max-width: 700px) {
       .tab-bar { display: flex; }
@@ -497,6 +518,7 @@
     body.viewer #importBtn,
     body.viewer #exportBtn,
     body.viewer #pdfBtn,
+    body.viewer #slidesBtn,
     body.viewer #shareBtn,
     body.viewer #shortBtn,
     body.viewer #docsBtn { display: none !important; }
@@ -535,6 +557,7 @@
     <button class="btn" id="exportBtn">Export</button>
     <button class="btn" id="pdfBtn">PDF</button>
     <input type="file" id="importFile" accept=".md,.txt,text/markdown,text/plain" style="display:none">
+    <button class="btn" id="slidesBtn">Slides</button>
     <button class="btn" id="viewBtn">View</button>
     <button class="btn primary" id="shareBtn">Copy URL</button>
     <button class="btn" id="shortBtn">Short URL</button>
@@ -557,6 +580,19 @@
     <div class="cmd-box">
       <input class="cmd-input" id="cmdInput" type="text" placeholder="Type a command... (Ctrl+K to close)">
       <ul class="cmd-list" id="cmdList"></ul>
+    </div>
+  </div>
+
+  <div class="slides-overlay" id="slidesOverlay">
+    <div class="slides-header">
+      <span class="slides-title">Presentation</span>
+      <span class="slides-counter"><span id="slidesCurrentIdx">1</span> / <span id="slidesTotalIdx">1</span></span>
+      <button class="slides-exit" id="slidesExit" title="Exit slides (Esc)">✕</button>
+    </div>
+    <div class="slides-content" id="slidesContent"></div>
+    <div class="slides-nav">
+      <button id="slidesPrev" title="Previous slide (←)">← Prev</button>
+      <button id="slidesNext" title="Next slide (→)">Next →</button>
     </div>
   </div>
 
@@ -2587,6 +2623,83 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         mainEl.style.display   = 'flex';
         modeBtn.textContent    = 'Live';
       }
+    });
+
+    // ── Slides mode ──────────────────────────────────────────────────────────
+    const slidesOverlay = document.getElementById('slidesOverlay');
+    const slidesContent = document.getElementById('slidesContent');
+    const slidesExit = document.getElementById('slidesExit');
+    const slidesPrev = document.getElementById('slidesPrev');
+    const slidesNext = document.getElementById('slidesNext');
+    const slidesCurrentIdx = document.getElementById('slidesCurrentIdx');
+    const slidesTotalIdx = document.getElementById('slidesTotalIdx');
+    const slidesBtn = document.getElementById('slidesBtn');
+
+    let slidesMode = false;
+    let slidesArray = [];
+    let slidesIdx = 0;
+
+    function splitSlides(content) {
+      return content.split(/\n---\n/).map(s => s.trim());
+    }
+
+    function renderSlide(idx) {
+      if (idx < 0 || idx >= slidesArray.length) return;
+      slidesIdx = idx;
+      slidesCurrentIdx.textContent = idx + 1;
+      slidesTotalIdx.textContent = slidesArray.length;
+
+      const div = document.createElement('div');
+      div.innerHTML = marked.parse(slidesArray[idx]);
+      div.querySelectorAll('pre code[class*="language-sort"]').forEach(el => {
+        const m = el.className.match(/language-sort([:-])(\S+)/);
+        if (m) {
+          el.dataset.sortLang = m[2];
+          el.classList.remove('language-sort' + m[1] + m[2]);
+          el.classList.add('language-' + m[2]);
+        }
+      });
+      if (typeof hljs !== 'undefined')
+        div.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw)').forEach(el => hljs.highlightElement(el));
+      attachRunButtons(div);
+      renderMermaid(div);
+      renderExcalidraw(div);
+
+      slidesContent.innerHTML = '';
+      const slide = document.createElement('div');
+      slide.className = 'slides-slide active md-body';
+      slide.appendChild(div);
+      slidesContent.appendChild(slide);
+
+      slidesPrev.disabled = idx === 0;
+      slidesNext.disabled = idx === slidesArray.length - 1;
+    }
+
+    function openSlides() {
+      slidesMode = true;
+      slidesArray = splitSlides(editor.value);
+      slidesIdx = 0;
+      slidesOverlay.classList.add('open');
+      renderSlide(0);
+    }
+
+    function closeSlides() {
+      slidesMode = false;
+      slidesOverlay.classList.remove('open');
+      slidesArray = [];
+      slidesIdx = 0;
+    }
+
+    slidesBtn.addEventListener('click', openSlides);
+    slidesExit.addEventListener('click', closeSlides);
+    slidesPrev.addEventListener('click', () => renderSlide(slidesIdx - 1));
+    slidesNext.addEventListener('click', () => renderSlide(slidesIdx + 1));
+
+    document.addEventListener('keydown', e => {
+      if (!slidesMode) return;
+      if (e.key === 'Escape') closeSlides();
+      if (e.key === 'ArrowLeft') renderSlide(slidesIdx - 1);
+      if (e.key === 'ArrowRight') renderSlide(slidesIdx + 1);
     });
 
     // ── Mobile tabs ──────────────────────────────────────────────────────────

@@ -74,6 +74,17 @@ Obsidian-style block editing. Markdown is segmented into blocks (separated by bl
 - Excalidraw blocks get an "Edit source" button overlay
 - `syncFromLive()` uses its own `liveDebounce` timer (separate from editor's `urlDebounce`)
 
+## Presentation mode (Slides)
+
+Fullscreen slide deck view for presenting. Slides are split by `---` delimiters.
+
+- "Slides" button enters presentation mode (fullscreen overlay)
+- Split content on `\n---\n` → array of slide markdown strings
+- Each slide rendered through marked + KaTeX + Mermaid pipeline
+- Navigation: arrow keys (← →), Prev/Next buttons, slide counter in header
+- Escape exits back to editor
+- Slides button hidden in viewer mode
+
 ## Rich content rendering
 
 ### KaTeX math
