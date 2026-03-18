@@ -765,17 +765,69 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       try { updateSize(hash ? hash : await encode(editor.value)); } catch(e) {}
     })();
 
-    // ── Tab capture ──────────────────────────────────────────────────────────
-    editor.addEventListener('keydown', e => {
+    // ── List editing helpers ────────────────────────────────────────────────
+    const LIST_RE = /^(\s*)([-*+]|\d+[.)]) (.*)$/;
+    const EMPTY_LIST_RE = /^(\s*)([-*+]|\d+[.)]) $/;
+
+    function getLine(text, pos) {
+      const start = text.lastIndexOf('\n', pos - 1) + 1;
+      const end = text.indexOf('\n', pos);
+      return { start, end: end === -1 ? text.length : end, text: text.slice(start, end === -1 ? text.length : end) };
+    }
+
+    function nextNum(marker) {
+      const n = parseInt(marker);
+      return isNaN(n) ? marker : (n + 1) + marker.slice(-1);
+    }
+
+    function handleListKeys(el, e) {
+      const pos = el.selectionStart, val = el.value;
+      const line = getLine(val, pos);
+      const m = line.text.match(LIST_RE);
+
+      if (e.key === 'Tab' && m) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          if (m[1].length >= 2) {
+            el.value = val.slice(0, line.start) + line.text.slice(2) + val.slice(line.end);
+            el.selectionStart = el.selectionEnd = pos - 2;
+          }
+        } else {
+          el.value = val.slice(0, line.start) + '  ' + line.text + val.slice(line.end);
+          el.selectionStart = el.selectionEnd = pos + 2;
+        }
+        el.dispatchEvent(new Event('input'));
+        return true;
+      }
+
+      if (e.key === 'Enter' && !e.shiftKey && m) {
+        e.preventDefault();
+        if (EMPTY_LIST_RE.test(line.text)) {
+          el.value = val.slice(0, line.start) + val.slice(line.end + 1);
+          el.selectionStart = el.selectionEnd = line.start;
+        } else {
+          const prefix = '\n' + m[1] + nextNum(m[2]) + ' ';
+          el.value = val.slice(0, pos) + prefix + val.slice(pos);
+          el.selectionStart = el.selectionEnd = pos + prefix.length;
+        }
+        el.dispatchEvent(new Event('input'));
+        return true;
+      }
+
       if (e.key === 'Tab') {
         e.preventDefault();
-        const start = editor.selectionStart;
-        const end = editor.selectionEnd;
-        editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
-        editor.selectionStart = editor.selectionEnd = start + 2;
-        editor.dispatchEvent(new Event('input'));
+        const end = el.selectionEnd;
+        el.value = val.substring(0, pos) + '  ' + val.substring(end);
+        el.selectionStart = el.selectionEnd = pos + 2;
+        el.dispatchEvent(new Event('input'));
+        return true;
       }
-    });
+
+      return false;
+    }
+
+    // ── Editor keydown ──────────────────────────────────────────────────────
+    editor.addEventListener('keydown', e => { handleListKeys(editor, e); });
 
     // ── Live update ──────────────────────────────────────────────────────────
     let debounce;
@@ -999,14 +1051,7 @@ Everything you type is compressed and encoded into the URL fragment (the part af
           ta.addEventListener('keydown', e => {
             const pos = ta.selectionStart, val = ta.value;
 
-            if (e.key === 'Tab') {
-              e.preventDefault();
-              const end = ta.selectionEnd;
-              ta.value = val.substring(0, pos) + '  ' + val.substring(end);
-              ta.selectionStart = ta.selectionEnd = pos + 2;
-              ta.dispatchEvent(new Event('input'));
-              return;
-            }
+            if (handleListKeys(ta, e)) return;
 
             if (e.key === 'Backspace' && pos === 0 && ta.selectionEnd === 0) {
               const prev = nearestBlock(i, -1);
