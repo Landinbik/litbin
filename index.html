@@ -1744,7 +1744,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         }
       });
       if (typeof hljs !== 'undefined')
-        preview.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+        preview.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(preview);
       renderMermaid(preview);
       renderExcalidraw(preview);

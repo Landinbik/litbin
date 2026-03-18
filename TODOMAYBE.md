@@ -6,12 +6,12 @@ Ideas for future improvements. None are committed to.
 
 ## Done
 
-- ~~**Deflate compression**~~ — `CompressionStream('deflate-raw')` + base64url replaces LZ-string (legacy fallback preserved)
+- ~~**Deflate compression**~~ — `CompressionStream('deflate-raw')` + base64url; lz-string removed entirely
 - ~~**CJK encoding**~~ ✗ reverted — percent-encoding makes URLs longer than base64url
 - ~~**KaTeX math**~~ — `$inline$` and `$$block$$` via marked extension + KaTeX CDN
 - ~~**File import**~~ — Import button loads .md/.txt into editor
 - ~~**File export**~~ — Export button downloads editor content as .md
-- ~~**Code execution**~~ — 32 languages via Wandbox API with run buttons
+- ~~**Code execution**~~ — 24 languages via Wandbox API with run buttons
 - ~~**Live mode**~~ — Obsidian-style block editing with fence-aware splitting
 - ~~**Mermaid diagrams**~~ — `mermaid` fenced blocks render as SVG, theme-aware
 - ~~**Tab capture**~~ — Tab inserts 2 spaces in both editor views
@@ -19,7 +19,9 @@ Ideas for future improvements. None are committed to.
 - ~~**Short URL**~~ — LinkShrink API, 1-year TTL, instant redirect
 - ~~**Line numbers**~~ — VS Code-style gutter with word-wrap support
 - ~~**Word count / reading time**~~ — Settings toggle, 180 wpm estimate
-- ~~**Excalidraw whiteboards**~~ — Interactive drawing in ` ```excalidraw ``` ` blocks, direct rendering (no iframe), save-back to markdown source, fold/unfold large JSON blocks, edit button in live mode
+- ~~**Excalidraw whiteboards**~~ — Interactive drawing in ` ```excalidraw ``` ` blocks, direct rendering (no iframe), save-back to markdown source, fold by default, edit button in live mode
+- ~~**Sort visualizer**~~ — `sort:LANG` fenced blocks animate sorting algorithms; `sort_print(arr, compare=, swap=)` injected automatically for Python, JS, TS, Ruby, C++, Rust, Lisp
+- ~~**Docs modal**~~ — `?` button in header opens full feature reference (languages, sort_print implementations, limits, etc.)
 
 ---
 
