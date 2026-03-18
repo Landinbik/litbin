@@ -8,11 +8,11 @@ Ideas for future improvements. None are committed to.
 
 The current stack uses LZ-string `compressToEncodedURIComponent` (base64url, 6 bits/char).
 
-### Better compression algorithm
-Switch to the native `CompressionStream` API (deflate-raw). No library needed — already in every modern browser. Generally achieves better compression ratios on text than LZ-string.
+### ~~Better compression algorithm~~ ✓ done
+~~Switch to the native `CompressionStream` API (deflate-raw).~~ Implemented: deflate-raw via `CompressionStream` replaces LZ-string. Old URLs still decode via LZ-string fallback.
 
-### Denser encoding
-The URL fragment (`#...`) is never sent to the server and browsers don't percent-encode many characters in it. A hand-picked ~2048-character Unicode alphabet of hash-safe characters gives ~11 bits/char vs base64's 6 — nearly double the density. Combined with deflate this could 2–3× the practical document size limit.
+### ~~Denser encoding~~ ✓ done
+~~A hand-picked ~2048-character Unicode alphabet.~~ Implemented: 2048-char CJK alphabet (U+4E00–U+55FF), 11 bits/char vs base64's 6 — ~1.8× denser, combined with better deflate compression.
 
 ---
 

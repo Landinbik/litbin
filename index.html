@@ -615,8 +615,53 @@ SELECT 'hello from SQL' AS message;
     applyTheme();
 
     // ── Codec ────────────────────────────────────────────────────────────────
-    const encode = t => LZString.compressToEncodedURIComponent(t);
-    const decode = h => LZString.decompressFromEncodedURIComponent(h) || '';
+    // deflate-raw compression + 2048-char CJK alphabet (U+4E00–U+55FF)
+    // 11 bits/char vs LZ-string's 6 bits/char → ~1.8× denser URL encoding
+    const _BASE = 0x4E00, _BITS = 11, _MASK = (1 << _BITS) - 1;
+
+    function _pack(bytes) {
+      let buf = 0, bits = 0, out = '';
+      for (const b of bytes) {
+        buf = (buf << 8) | b; bits += 8;
+        if (bits >= _BITS) {
+          bits -= _BITS;
+          out += String.fromCodePoint(_BASE + ((buf >> bits) & _MASK));
+          buf &= (1 << bits) - 1;
+        }
+      }
+      const pad = bits > 0 ? _BITS - bits : 0;
+      if (bits > 0) out += String.fromCodePoint(_BASE + ((buf << pad) & _MASK));
+      return String.fromCodePoint(_BASE + pad) + out;
+    }
+
+    function _unpack(str) {
+      const pad = str.codePointAt(0) - _BASE;
+      const nb  = ((str.length - 1) * _BITS - pad) >> 3;
+      const out = new Uint8Array(nb);
+      let buf = 0, bits = 0, i = 0;
+      for (let c = 1; c < str.length && i < nb; c++) {
+        buf = (buf << _BITS) | (str.codePointAt(c) - _BASE); bits += _BITS;
+        while (bits >= 8 && i < nb) { bits -= 8; out[i++] = (buf >> bits) & 0xFF; buf &= (1 << bits) - 1; }
+      }
+      return out;
+    }
+
+    async function encode(text) {
+      const cs = new CompressionStream('deflate-raw');
+      const w = cs.writable.getWriter();
+      w.write(new TextEncoder().encode(text)); w.close();
+      return _pack(new Uint8Array(await new Response(cs.readable).arrayBuffer()));
+    }
+
+    async function decode(hash) {
+      if (hash.charCodeAt(0) >= _BASE) {          // new deflate+CJK format
+        const ds = new DecompressionStream('deflate-raw');
+        const w = ds.writable.getWriter();
+        w.write(_unpack(hash)); w.close();
+        return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
+      }
+      return LZString.decompressFromEncodedURIComponent(hash) || ''; // legacy
+    }
 
     // ── Marked options ───────────────────────────────────────────────────────
     marked.use({ breaks: true, gfm: true });
@@ -787,19 +832,21 @@ SELECT 'hello from SQL' AS message;
     }
 
     // ── Init from URL ────────────────────────────────────────────────────────
-    const hash = location.hash.slice(1);
-    try { editor.value = hash ? decode(hash) : DEFAULT; } catch(e) { editor.value = DEFAULT; }
-    render();
-    try { updateSize(hash || encode(editor.value)); } catch(e) {}
+    (async () => {
+      const hash = location.hash.slice(1);
+      try { editor.value = hash ? await decode(hash) : DEFAULT; } catch(e) { editor.value = DEFAULT; }
+      render();
+      try { updateSize(hash ? hash : await encode(editor.value)); } catch(e) {}
+    })();
 
     // ── Live update ──────────────────────────────────────────────────────────
     let debounce;
     editor.addEventListener('input', () => {
-      render();                          // immediate — never skip this
+      render();                               // immediate — never skip this
       clearTimeout(debounce);
-      debounce = setTimeout(() => {     // debounce only the URL write
+      debounce = setTimeout(async () => {    // debounce only the URL write
         try {
-          const encoded = encode(editor.value);
+          const encoded = await encode(editor.value);
           history.replaceState(null, '', '#' + encoded);
           updateSize(encoded);
         } catch(e) { console.warn('URL sync failed:', e); }
