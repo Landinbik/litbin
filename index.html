@@ -606,6 +606,71 @@ ms(0,n)
 sort_print(disp)
 \`\`\`
 
+\`\`\`sort:lisp
+; Quicksort — pivot at 1/3 of the subarray
+(defun swap-el (arr i j) (rotatef (aref arr i) (aref arr j)))
+
+(defun qs-partition (arr lo hi)
+  (let* ((pi (+ lo (floor (- hi lo) 3)))
+         (pv (aref arr pi)))
+    (swap-el arr pi hi)
+    (let ((store lo))
+      (loop for i from lo below hi do
+        (when (< (aref arr i) pv)
+          (sort-print arr :compare (list i store))
+          (swap-el arr i store)
+          (incf store)))
+      (swap-el arr store hi)
+      store)))
+
+(defun quicksort (arr lo hi)
+  (when (< lo hi)
+    (let ((p (qs-partition arr lo hi)))
+      (sort-print arr :swap p)
+      (when (> p lo) (quicksort arr lo (1- p)))
+      (quicksort arr (1+ p) hi))))
+
+(let* ((data '(9 3 7 1 8 2 6 4 10 5))
+       (arr (make-array (length data) :initial-contents data)))
+  (sort-print arr)
+  (quicksort arr 0 (1- (length arr)))
+  (sort-print arr))
+\`\`\`
+
+\`\`\`sort:rust
+fn partition(arr: &mut Vec<i64>, lo: usize, hi: usize) -> usize {
+    let pivot_idx = lo + (hi - lo) / 3;
+    arr.swap(pivot_idx, hi);
+    let pivot = arr[hi];
+    let mut store = lo;
+    for i in lo..hi {
+        if arr[i] < pivot {
+            sort_print(arr, &[i, store], &[]);
+            arr.swap(i, store);
+            store += 1;
+        }
+    }
+    arr.swap(store, hi);
+    store
+}
+
+fn qs(arr: &mut Vec<i64>, lo: usize, hi: usize) {
+    if lo >= hi { return; }
+    let p = partition(arr, lo, hi);
+    sort_print(arr, &[], &[p]);
+    if p > lo { qs(arr, lo, p - 1); }
+    if p < hi { qs(arr, p + 1, hi); }
+}
+
+fn main() {
+    let mut arr: Vec<i64> = vec![9, 3, 7, 1, 8, 2, 6, 4, 10, 5];
+    sort_print(&arr, &[], &[]);
+    let n = arr.len();
+    qs(&mut arr, 0, n - 1);
+    sort_print(&arr, &[], &[]);
+}
+\`\`\`
+
 ---
 
 ## How it works
