@@ -1137,9 +1137,9 @@ SELECT 'hello from SQL' AS message;
     function syncFromLive() {
       editor.value = joinSegs();
       clearTimeout(debounce);
-      debounce = setTimeout(() => {
+      debounce = setTimeout(async () => {
         try {
-          const encoded = encode(editor.value);
+          const encoded = await encode(editor.value);
           history.replaceState(null, '', '#' + encoded);
           updateSize(encoded);
         } catch(e) {}
