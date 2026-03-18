@@ -396,8 +396,28 @@
       position: relative;
       margin-bottom: 1em;
     }
+    .code-block-left { position: relative; }
     .code-block-wrap .md-body pre,
     .code-block-wrap pre { margin-bottom: 0; }
+
+    /* ── Live view side-by-side layout ── */
+    .live-block .code-block-wrap:has(.sort-viz) {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .live-block .code-block-wrap:has(.sort-viz) .code-block-left {
+      flex: 0 0 42%;
+      min-width: 0;
+    }
+    .live-block .code-block-wrap:has(.sort-viz) .sort-viz {
+      flex: 1;
+      min-width: 0;
+      border-top: 1px solid var(--border);
+      border-radius: 6px;
+      margin-top: 0;
+    }
     .run-btn {
       position: absolute;
       top: 8px;
@@ -1667,19 +1687,24 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         const wrap = document.createElement('div');
         wrap.className = 'code-block-wrap';
         pre.replaceWith(wrap);
-        wrap.appendChild(pre);
+
+        // Left column: code + button + output (so run-btn positions relative to it)
+        const left = document.createElement('div');
+        left.className = 'code-block-left';
+        left.appendChild(pre);
+        wrap.appendChild(left);
 
         const btn = document.createElement('button');
         btn.className   = 'run-btn';
         btn.textContent = isSort ? '▶ Visualize' : '▶ Run';
-        wrap.appendChild(btn);
+        left.appendChild(btn);
 
         const outEl = document.createElement('div');
         const cacheKey = rawLang + '\x00' + codeEl.textContent;
         const cached = outputCache.get(cacheKey);
         if (cached) { outEl.className = cached.className; outEl.innerHTML = cached.innerHTML; }
         else outEl.className = 'code-output';
-        wrap.appendChild(outEl);
+        left.appendChild(outEl);
 
         const varRefs = codeEl.dataset.litVars ? codeEl.dataset.litVars.split(',').filter(Boolean) : [];
 
