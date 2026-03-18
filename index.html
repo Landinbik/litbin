@@ -724,6 +724,8 @@ SELECT 'hello from SQL' AS message;
       sql:           { compiler: 'sqlite-3.46.1',         options: '' },
     };
 
+    const outputCache = new Map(); // key: lang+'\x00'+code → {className, innerHTML}
+
     async function executeCode(lang, code, outEl, btn) {
       const spec = EXEC_LANGS[lang.toLowerCase()];
       if (!spec) return;
@@ -810,10 +812,16 @@ SELECT 'hello from SQL' AS message;
         wrap.appendChild(btn);
 
         const outEl = document.createElement('div');
-        outEl.className = 'code-output';
+        const cacheKey = lang + '\x00' + codeEl.textContent;
+        const cached = outputCache.get(cacheKey);
+        if (cached) { outEl.className = cached.className; outEl.innerHTML = cached.innerHTML; }
+        else outEl.className = 'code-output';
         wrap.appendChild(outEl);
 
-        btn.addEventListener('click', () => executeCode(lang, codeEl.textContent, outEl, btn));
+        btn.addEventListener('click', async () => {
+          await executeCode(lang, codeEl.textContent, outEl, btn);
+          outputCache.set(cacheKey, { className: outEl.className, innerHTML: outEl.innerHTML });
+        });
       });
     }
 
