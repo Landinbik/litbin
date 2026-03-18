@@ -2095,7 +2095,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         openCommandPalette();
         return;
       }
-      // Bold (Ctrl+B / Cmd+B)
+      // Bold (Ctrl+B / Cmd+B) - toggle
       if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
         e.preventDefault();
         const start = editor.selectionStart;
@@ -2104,9 +2104,17 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         if (selected) {
           const before = editor.value.substring(0, start);
           const after = editor.value.substring(end);
-          editor.value = before + '**' + selected + '**' + after;
-          editor.selectionStart = start;
-          editor.selectionEnd = end + 4;
+          // Check if already bold
+          if (selected.startsWith('**') && selected.endsWith('**') && selected.length > 4) {
+            const unbolded = selected.slice(2, -2);
+            editor.value = before + unbolded + after;
+            editor.selectionStart = start;
+            editor.selectionEnd = end - 4;
+          } else {
+            editor.value = before + '**' + selected + '**' + after;
+            editor.selectionStart = start;
+            editor.selectionEnd = end + 4;
+          }
         } else {
           editor.value = editor.value.substring(0, start) + '****' + editor.value.substring(start);
           editor.selectionStart = editor.selectionEnd = start + 2;
@@ -2114,7 +2122,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         editor.dispatchEvent(new Event('input'));
         return;
       }
-      // Italic (Ctrl+I / Cmd+I)
+      // Italic (Ctrl+I / Cmd+I) - toggle
       if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
         e.preventDefault();
         const start = editor.selectionStart;
@@ -2123,9 +2131,17 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         if (selected) {
           const before = editor.value.substring(0, start);
           const after = editor.value.substring(end);
-          editor.value = before + '*' + selected + '*' + after;
-          editor.selectionStart = start;
-          editor.selectionEnd = end + 2;
+          // Check if already italic
+          if (selected.startsWith('*') && selected.endsWith('*') && selected.length > 2 && !selected.startsWith('**')) {
+            const unitalicized = selected.slice(1, -1);
+            editor.value = before + unitalicized + after;
+            editor.selectionStart = start;
+            editor.selectionEnd = end - 2;
+          } else {
+            editor.value = before + '*' + selected + '*' + after;
+            editor.selectionStart = start;
+            editor.selectionEnd = end + 2;
+          }
         } else {
           editor.value = editor.value.substring(0, start) + '**' + editor.value.substring(start);
           editor.selectionStart = editor.selectionEnd = start + 1;
