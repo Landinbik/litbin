@@ -1953,6 +1953,42 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
           insertAtCursor(editor, timeStr);
           closeCommandPalette();
         }
+      },
+      {
+        name: 'Insert date',
+        action: () => {
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const day = String(now.getDate()).padStart(2, '0');
+          const dateStr = `${year}-${month}-${day}`;
+          insertAtCursor(editor, dateStr);
+          closeCommandPalette();
+        }
+      },
+      {
+        name: 'Insert code block',
+        action: () => {
+          const codeBlock = '```js\n\n```';
+          insertAtCursor(editor, codeBlock);
+          closeCommandPalette();
+        }
+      },
+      {
+        name: 'Insert mermaid',
+        action: () => {
+          const mermaid = '```mermaid\ngraph LR\n  A --> B\n```';
+          insertAtCursor(editor, mermaid);
+          closeCommandPalette();
+        }
+      },
+      {
+        name: 'Insert excalidraw',
+        action: () => {
+          const excalidraw = '```excalidraw\n{"elements":[],"appState":{"viewBackgroundColor":"#ffffff","theme":"light"}}\n```';
+          insertAtCursor(editor, excalidraw);
+          closeCommandPalette();
+        }
       }
     ];
 
