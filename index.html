@@ -678,30 +678,97 @@ Everything you type is compressed and encoded into the URL fragment (the part af
     }
 
     // ── Excalidraw diagrams ─────────────────────────────────────────────────
-    const _excalidrawCache = new Map();
-    function renderExcalidraw(container) {
-      const nodes = container.querySelectorAll('pre > code.language-excalidraw');
-      for (const codeEl of nodes) {
-        const src = codeEl.textContent.trim();
+    const CLOSE_SCRIPT = '<' + '/script>';
 
-        const cached = _excalidrawCache.get(src);
-        if (cached) {
-          codeEl.parentElement.replaceWith(cached);
-          continue;
+    function buildIframeHtml(id, initialData) {
+      const dataJson = JSON.stringify(initialData)
+        .replace(/<\/script>/gi, '<\\/script>');
+      return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/dev/index.css">
+<script type="importmap">
+{"imports":{"react":"https://esm.sh/react@19.0.0","react-dom":"https://esm.sh/react-dom@19.0.0","react-dom/client":"https://esm.sh/react-dom@19.0.0/client"}}
+${CLOSE_SCRIPT}
+<style>*{box-sizing:border-box;margin:0;padding:0}html,body,#root{height:100%}</style>
+</head><body><div id="root"></div>
+<script type="module">
+import React from"react";
+import{createRoot}from"react-dom/client";
+import*as X from"https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/dev/index.js?external=react,react-dom";
+const{Excalidraw}=X;
+const initialData=${dataJson};
+let t;
+function post(els,as){clearTimeout(t);t=setTimeout(()=>parent.postMessage({type:'excalidraw-update',id:${id},elements:Array.from(els),appState:{viewBackgroundColor:as.viewBackgroundColor,theme:as.theme}},'*'),600);}
+createRoot(document.getElementById('root')).render(React.createElement(Excalidraw,{initialData,onChange:(e,a)=>post(e,a)}));
+${CLOSE_SCRIPT}
+</body></html>`;
+    }
+
+    let _excalidrawCounter = 0;
+    const _excalidrawWrapCache = new Map();
+
+    function pruneExcalidrawCache(newCount) {
+      for (const [id, wrap] of _excalidrawWrapCache) {
+        if (id >= newCount) {
+          const iframe = wrap.querySelector('iframe');
+          if (iframe?.src.startsWith('blob:')) URL.revokeObjectURL(iframe.src);
+          _excalidrawWrapCache.delete(id);
         }
-
-        const wrap = document.createElement('div');
-        wrap.className = 'excalidraw-wrap';
-
-        const iframe = document.createElement('iframe');
-        iframe.src = 'https://excalidraw.com';
-        iframe.allow = 'clipboard-write';
-        wrap.appendChild(iframe);
-
-        _excalidrawCache.set(src, wrap);
-        codeEl.parentElement.replaceWith(wrap);
       }
     }
+
+    function renderExcalidraw(container) {
+      _excalidrawCounter = 0;
+      const nodes = container.querySelectorAll('pre > code.language-excalidraw');
+      for (const codeEl of nodes) {
+        const id = _excalidrawCounter++;
+        const cached = _excalidrawWrapCache.get(id);
+        if (cached) { codeEl.parentElement.replaceWith(cached); continue; }
+
+        let initialData = null;
+        try { initialData = JSON.parse(codeEl.textContent.trim()); } catch(e) {}
+        initialData = initialData || { elements: [], appState: {} };
+
+        const blobUrl = URL.createObjectURL(
+          new Blob([buildIframeHtml(id, initialData)], { type: 'text/html' })
+        );
+        const wrap = document.createElement('div');
+        wrap.className = 'excalidraw-wrap';
+        wrap.dataset.excalidrawId = id;
+        const iframe = document.createElement('iframe');
+        iframe.src = blobUrl;
+        iframe.allow = 'clipboard-write';
+        wrap.appendChild(iframe);
+        _excalidrawWrapCache.set(id, wrap);
+        codeEl.parentElement.replaceWith(wrap);
+      }
+      pruneExcalidrawCache(_excalidrawCounter);
+    }
+
+    window.addEventListener('message', e => {
+      const msg = e.data;
+      if (!msg || msg.type !== 'excalidraw-update') return;
+      const { id, elements, appState } = msg;
+      if (!Number.isInteger(id) || id < 0 || id >= _excalidrawCounter) return;
+
+      const sceneJson = JSON.stringify({ elements, appState }, null, 2);
+      let count = -1;
+      const updated = editor.value.replace(
+        /^```excalidraw\n([\s\S]*?)^```/gm,
+        (match) => { count++; return count === id ? '```excalidraw\n' + sceneJson + '\n```' : match; }
+      );
+      if (updated === editor.value) return;
+
+      editor.value = updated;
+      clearTimeout(urlDebounce);
+      urlDebounce = setTimeout(async () => {
+        try {
+          const encoded = await encode(editor.value);
+          history.replaceState(null, '', '#' + encoded);
+          updateSize(encoded);
+        } catch(e) {}
+      }, 400);
+    });
 
     // ── Code execution (Wandbox API) ─────────────────────────────────────────
     const EXEC_LANGS = {
