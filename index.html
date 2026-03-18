@@ -1002,8 +1002,11 @@ int main() {
       renderLive();
     }
 
+    let _rendering = false;
     function renderLive() {
+      _rendering = true;
       liveContent.innerHTML = '';
+      _rendering = false;
 
       liveSegs.forEach((seg, i) => {
         if (seg.type === 'blank') {
@@ -1103,6 +1106,7 @@ int main() {
           });
 
           ta.addEventListener('blur', () => {
+            if (_rendering) return;
             liveSegs[i] = { type: 'block', text: ta.value };
             liveActiveIdx = nextActiveIdx;
             nextActiveIdx = null;
