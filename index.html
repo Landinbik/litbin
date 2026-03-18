@@ -2104,13 +2104,17 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         if (selected) {
           const before = editor.value.substring(0, start);
           const after = editor.value.substring(end);
-          // Check if already bold
-          if (selected.startsWith('**') && selected.endsWith('**') && selected.length > 4) {
-            const unbolded = selected.slice(2, -2);
+          // Count leading/trailing asterisks
+          const leadingStars = /^\*+/.exec(selected)?.[0].length || 0;
+          const trailingStars = /\*+$/.exec(selected)?.[0].length || 0;
+          // If at least 2 stars on each side, remove 2 (toggle bold off)
+          if (leadingStars >= 2 && trailingStars >= 2 && selected.length > 4) {
+            const unbolded = selected.slice(2, selected.length - 2);
             editor.value = before + unbolded + after;
             editor.selectionStart = start;
             editor.selectionEnd = end - 4;
           } else {
+            // Add bold
             editor.value = before + '**' + selected + '**' + after;
             editor.selectionStart = start;
             editor.selectionEnd = end + 4;
@@ -2131,13 +2135,18 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         if (selected) {
           const before = editor.value.substring(0, start);
           const after = editor.value.substring(end);
-          // Check if already italic
-          if (selected.startsWith('*') && selected.endsWith('*') && selected.length > 2 && !selected.startsWith('**')) {
-            const unitalicized = selected.slice(1, -1);
+          // Count leading/trailing asterisks
+          const leadingStars = /^\*+/.exec(selected)?.[0].length || 0;
+          const trailingStars = /\*+$/.exec(selected)?.[0].length || 0;
+          // If odd number of stars (and matching), toggle italic
+          if (leadingStars >= 1 && trailingStars === leadingStars && leadingStars % 2 === 1 && selected.length > 2) {
+            // Odd stars = has italic, remove 1
+            const unitalicized = selected.slice(1, selected.length - 1);
             editor.value = before + unitalicized + after;
             editor.selectionStart = start;
             editor.selectionEnd = end - 2;
           } else {
+            // Add italic
             editor.value = before + '*' + selected + '*' + after;
             editor.selectionStart = start;
             editor.selectionEnd = end + 2;
