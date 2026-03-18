@@ -934,22 +934,27 @@ int main() {
         .catch(() => showToast('Copy failed — select the address bar manually'));
     });
 
-    // ── Short URL ─────────────────────────────────────────────────────────────
+    // ── Short URL (JSONP to bypass CORS) ────────────────────────────────────
     const shortBtn = document.getElementById('shortBtn');
-    shortBtn.addEventListener('click', async () => {
+    shortBtn.addEventListener('click', () => {
       shortBtn.disabled = true;
       shortBtn.textContent = '…';
-      try {
-        const res = await fetch('https://is.gd/create.php?format=simple&url=' + encodeURIComponent(location.href));
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const short = await res.text();
-        await navigator.clipboard.writeText(short.trim());
-        showToast('Short URL copied!');
-      } catch(e) {
-        showToast('Shortening failed: ' + e.message);
-      }
-      shortBtn.disabled = false;
-      shortBtn.textContent = 'Short URL';
+      const cb = '_shortUrlCb' + Date.now();
+      const script = document.createElement('script');
+      const cleanup = () => { delete window[cb]; script.remove(); shortBtn.disabled = false; shortBtn.textContent = 'Short URL'; };
+      window[cb] = data => {
+        cleanup();
+        if (data.shorturl) {
+          navigator.clipboard.writeText(data.shorturl)
+            .then(() => showToast('Short URL copied!'))
+            .catch(() => showToast('Copy failed'));
+        } else {
+          showToast('Shortening failed: ' + (data.errormessage || 'unknown error'));
+        }
+      };
+      script.src = 'https://is.gd/create.php?format=json&callback=' + cb + '&url=' + encodeURIComponent(location.href);
+      script.onerror = () => { cleanup(); showToast('Shortening failed — network error'); };
+      document.head.appendChild(script);
     });
 
     // ── Import ───────────────────────────────────────────────────────────────
