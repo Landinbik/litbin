@@ -401,22 +401,21 @@
     .code-block-wrap pre { margin-bottom: 0; }
 
     /* ── Live view side-by-side layout ── */
-    .live-block .code-block-wrap:has(.sort-viz) {
+    .viz-inline {
       display: flex;
       flex-direction: row;
       align-items: flex-start;
-      gap: 12px;
+      gap: 16px;
     }
-    .live-block .code-block-wrap:has(.sort-viz) .code-block-left {
+    .viz-inline .code-block-left {
       flex: 0 0 42%;
       min-width: 0;
     }
-    .live-block .code-block-wrap:has(.sort-viz) .sort-viz {
+    .viz-inline .sort-viz {
       flex: 1;
       min-width: 0;
       border-top: 1px solid var(--border);
       border-radius: 6px;
-      margin-top: 0;
     }
     .run-btn {
       position: absolute;
@@ -1950,6 +1949,9 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       });
 
       renderFrame(0);
+
+      // Side-by-side layout when inside a live-block
+      if (wrapEl.closest('.live-block')) wrapEl.classList.add('viz-inline');
 
       // Register with master viz controller if one exists in an ancestor container
       let el = wrapEl.parentElement;
