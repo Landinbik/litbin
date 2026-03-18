@@ -1117,7 +1117,7 @@ int main() {
           liveContent.appendChild(ta);
           requestAnimationFrame(() => {
             ta.style.height = '0';
-            ta.style.height = ta.scrollHeight + 'px';
+            ta.style.height = Math.max(ta.scrollHeight, 31) + 'px';
             ta.focus();
             const p = liveCursorPos !== null ? liveCursorPos : ta.value.length;
             ta.setSelectionRange(p, p);
