@@ -505,6 +505,9 @@
     .slides-arrow.visible { display:flex; }
     .slides-arrow-left { left:0; }
     .slides-arrow-right { right:0; }
+    .action-buttons { display:flex; gap:8px; margin-bottom:12px; }
+    .action-buttons button { padding:6px 12px; font-size:13px; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:4px; cursor:pointer; }
+    .action-buttons button:hover { background:var(--accent); color:white; }
 
     /* ── Mobile overrides ── */
     @media (max-width: 700px) {
@@ -1575,6 +1578,32 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       });
     }
 
+    function runAllCode(container) {
+      const buttons = container.querySelectorAll('.run-btn');
+      let idx = 0;
+      const runNext = async () => {
+        if (idx < buttons.length) {
+          buttons[idx++].click();
+          await new Promise(resolve => setTimeout(resolve, 200));
+          await runNext();
+        }
+      };
+      runNext();
+    }
+
+    function visualizeAllSorts(container) {
+      const buttons = Array.from(container.querySelectorAll('.run-btn')).filter(btn => btn.textContent.includes('Visualize'));
+      let idx = 0;
+      const runNext = async () => {
+        if (idx < buttons.length) {
+          buttons[idx++].click();
+          await new Promise(resolve => setTimeout(resolve, 200));
+          await runNext();
+        }
+      };
+      runNext();
+    }
+
     // ── Sort visualizer ──────────────────────────────────────────────────────
     // Output: one line per frame, space-separated numbers
     //   (N) = comparing (yellow), [N] = swapping/writing (red)
@@ -1903,6 +1932,26 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       renderExcalidraw(preview);
       updateWordCount();
       updateLineNums();
+      addActionButtons(preview);
+    }
+
+    function addActionButtons(container) {
+      let existing = container.querySelector('.action-buttons');
+      if (existing) existing.remove();
+      const hasRun = container.querySelector('.run-btn');
+      if (!hasRun) return;
+      const btnContainer = document.createElement('div');
+      btnContainer.className = 'action-buttons';
+      const runAllBtn = document.createElement('button');
+      runAllBtn.textContent = '▶ Run all';
+      runAllBtn.addEventListener('click', () => runAllCode(container));
+      btnContainer.appendChild(runAllBtn);
+      const vizAllBtn = document.createElement('button');
+      vizAllBtn.textContent = '▶ Visualize all';
+      vizAllBtn.addEventListener('click', () => visualizeAllSorts(container));
+      btnContainer.appendChild(vizAllBtn);
+      const firstCode = container.querySelector('.code-block-wrap');
+      if (firstCode) firstCode.parentElement.insertBefore(btnContainer, firstCode);
     }
 
     // ── Settings ─────────────────────────────────────────────────────────────
@@ -2694,6 +2743,8 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       slide.className = 'slides-slide active md-body';
       slide.appendChild(div);
       slidesContent.insertBefore(slide, slidesArrowRight);
+
+      addActionButtons(slide);
 
       slidesPrev.disabled = idx === 0;
       slidesNext.disabled = idx === slidesArray.length - 1;
