@@ -58,8 +58,8 @@ Auto-generate from headings. Collapsible sidebar or injected at top of preview.
 ### PDF viewing mode (paper view) — *Low-Medium*
 CSS-only print-preview simulation. Toggle via "Paper" button — applies `.paper-view` class to preview. Each "page" is a fixed-height div with box-shadow border and margin between pages; `break-after: page` and fixed page dimensions. No PDF.js needed — purely visual. (True PDF.js + html2canvas pipeline would be **High** difficulty for low gain.)
 
-### Custom right-click context menu — *Low-Medium*
-`contextmenu` listener on `#editor` — `e.preventDefault()`, position a `.ctx-menu` div at `(e.clientX, e.clientY)`, dismiss on click-outside/Escape. Items: Insert code block, Insert table, Insert image, Insert heading, Bold, Italic, HR — each calls `insertAtCursor(editor, text)` at `selectionStart`. Extend to preview pane with read-only actions (copy block, copy as HTML). Pairs well with table improvements.
+### Command palette — *Low-Medium*
+Keyboard-driven command menu (Ctrl+K / Cmd+K) with fuzzy search. Modal overlay with filterable command list: Insert code block, Insert table, Insert image, Insert heading, Bold, Italic, HR — each calls `insertAtCursor(editor, text)` at `selectionStart`. Dismiss on Esc/click-outside. Lightweight and searchable; scales as more commands are added. Pairs well with keyboard shortcuts cheat sheet and table improvements.
 
 ### Slides mode — *Medium*
 "Slides" button enters fullscreen overlay view. Split `getEditorContent()` on `\n---\n` → array of slide markdown strings, render each through the full marked + KaTeX + Mermaid pipeline. Show one slide at a time; ← → arrow keys and on-screen buttons navigate. CSS: centered content, large font, slide counter, theme-aware background. Esc exits. (`---` already renders as `<hr>` in markdown — slides mode intercepts before marked.)
