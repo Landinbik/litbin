@@ -188,17 +188,23 @@
     #lineNums {
       width: 40px;
       flex-shrink: 0;
-      padding: 16px 8px 16px 0;
+      padding: 16px 0 16px 0;
       text-align: right;
-      font-family: 'SFMono-Regular', 'Cascadia Code', 'Consolas', 'Liberation Mono', monospace;
-      font-size: 14px;
-      line-height: 1.65;
-      white-space: pre;
       color: var(--text-muted);
       background: var(--bg);
       border-right: 1px solid var(--border);
-      overflow: hidden;
+      overflow-y: scroll;
+      scrollbar-width: none;
       user-select: none;
+      position: relative;
+    }
+    #lineNums::-webkit-scrollbar { display: none; }
+    .line-num {
+      display: block;
+      padding-right: 8px;
+      font-family: 'SFMono-Regular', 'Cascadia Code', 'Consolas', 'Liberation Mono', monospace;
+      font-size: 14px;
+      line-height: 1.65;
     }
     #editor {
       flex: 1;
@@ -213,9 +219,20 @@
       background: var(--bg);
       color: var(--text);
       tab-size: 2;
-      white-space: pre;
-      overflow-x: auto;
-      wrap: off;
+    }
+    #editorMirror {
+      position: absolute;
+      visibility: hidden;
+      pointer-events: none;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      font-family: 'SFMono-Regular', 'Cascadia Code', 'Consolas', 'Liberation Mono', monospace;
+      font-size: 14px;
+      line-height: 1.65;
+      padding: 16px;
+      tab-size: 2;
+      border: none;
     }
 
     /* ── Preview ── */
@@ -453,7 +470,8 @@
       <div class="pane-label">Markdown</div>
       <div class="editor-wrap">
         <div id="lineNums"></div>
-        <textarea id="editor" spellcheck="false" wrap="off" placeholder="Write some markdown…"></textarea>
+        <textarea id="editor" spellcheck="false" placeholder="Write some markdown…"></textarea>
+        <div id="editorMirror"></div>
       </div>
     </div>
     <div id="divider"></div>
@@ -811,17 +829,36 @@ Everything you type is compressed and encoded into the URL fragment (the part af
 
     // ── Line numbers ────────────────────────────────────────────────────────
     const lineNums = document.getElementById('lineNums');
-    let prevLineCount = 0;
+    const editorMirror = document.getElementById('editorMirror');
+
     function updateLineNums() {
-      const count = editor.value.split('\n').length;
-      if (count === prevLineCount) return;
-      prevLineCount = count;
-      const nums = [];
-      for (let i = 1; i <= count; i++) nums.push(i);
-      lineNums.textContent = nums.join('\n');
+      // Size the mirror to match the editor's content width
+      const cs = getComputedStyle(editor);
+      editorMirror.style.width = editor.clientWidth + 'px';
+      editorMirror.style.boxSizing = cs.boxSizing;
+
+      // Measure each line's wrapped height using the mirror
+      const lines = editor.value.split('\n');
+      editorMirror.innerHTML = '';
+      const spans = lines.map(line => {
+        const span = document.createElement('div');
+        span.textContent = line || '\u200b'; // zero-width space for empty lines
+        editorMirror.appendChild(span);
+        return span;
+      });
+
+      // Build line number elements with matching heights
+      let html = '';
+      for (let i = 0; i < spans.length; i++) {
+        const h = spans[i].offsetHeight;
+        html += `<span class="line-num" style="height:${h}px">${i + 1}</span>`;
+      }
+      lineNums.innerHTML = html;
     }
+
     editor.addEventListener('input', updateLineNums);
     editor.addEventListener('scroll', () => { lineNums.scrollTop = editor.scrollTop; });
+    new ResizeObserver(updateLineNums).observe(editor);
 
     // ── Render ───────────────────────────────────────────────────────────────
     function render() {
