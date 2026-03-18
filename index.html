@@ -553,7 +553,7 @@ graph LR
 **Whiteboard** — excalidraw blocks are interactive:
 
 \`\`\`excalidraw
-{}
+{"elements":[],"appState":{"viewBackgroundColor":"#ffffff","theme":"light"}}
 \`\`\`
 
 **Runnable code** — hit ▶ Run to execute via Wandbox:
@@ -839,7 +839,7 @@ Everything you type is compressed and encoded into the URL fragment (the part af
         appState: { viewBackgroundColor: appState.viewBackgroundColor, theme: appState.theme }
       });
       if (_drawingsFolded) {
-        // Update stored data without touching the folded placeholder
+        if ((_foldedData.get(id) || '').trim() === sceneJson) return;
         _foldedData.set(id, sceneJson);
       } else {
         let count = -1;
@@ -870,6 +870,9 @@ Everything you type is compressed and encoded into the URL fragment (the part af
 
         let initialData = null;
         try { initialData = JSON.parse(codeEl.textContent.trim()); } catch(e) {}
+        if (!initialData && _drawingsFolded && _foldedData.has(id)) {
+          try { initialData = JSON.parse(_foldedData.get(id)); } catch(e) {}
+        }
         initialData = initialData || { elements: [], appState: {} };
 
         const wrap = document.createElement('div');
@@ -981,6 +984,15 @@ template<class T>void sort_print(const std::vector<T>&a,std::initializer_list<in
       rust: `use std::collections::HashSet;
 fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:HashSet<_>=compare.iter().cloned().collect();let s:HashSet<_>=swap.iter().cloned().collect();let out:Vec<String>=a.iter().enumerate().map(|(i,v)|{if s.contains(&i){format!("[{}]",v)}else if c.contains(&i){format!("({})",v)}else{format!("{}",v)}}).collect();println!("{}",out.join(" "));}
 `,
+      lisp: `(defun sort-print (a &key compare swap)
+  (flet ((tl (x) (if (null x) nil (if (listp x) x (list x)))))
+    (let ((c (tl compare)) (s (tl swap)))
+      (format t "~{~a~^ ~}~%"
+        (loop for v in (coerce a 'list) for i from 0
+              collect (cond ((member i s) (format nil "[~a]" v))
+                            ((member i c) (format nil "(~a)" v))
+                            (t (format nil "~a" v))))))))
+`,
     };
     // Aliases
     ['python3','py'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.python);
@@ -989,6 +1001,7 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
     ['rb'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.ruby);
     ['c++','cxx'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.cpp);
     ['rs'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.rust);
+    ['common-lisp','commonlisp'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.lisp);
 
     const outputCache = new Map(); // key: lang+'\x00'+code → {className, innerHTML}
 
@@ -1458,6 +1471,7 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
       const hash = location.hash.slice(1);
       try { editor.value = hash ? await decode(hash) : DEFAULT; } catch(e) { editor.value = DEFAULT; }
       updateFoldBtnVisibility();
+      if (hasExcalidrawBlocks(editor.value)) foldDrawings();
       render();
       try { updateSize(hash ? hash : await encode(getEditorContent())); } catch(e) {}
     })();
