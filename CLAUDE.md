@@ -78,12 +78,14 @@ Obsidian-style block editing. Markdown is segmented into blocks (separated by bl
 
 Fullscreen slide deck view for presenting. Slides are split by `---` delimiters.
 
-- "Slides" button enters presentation mode (fullscreen overlay)
+- "Slides" button in editor toggles fullscreen presentation mode
+- URL parameter `?slides` opens slides directly on load (shareable link)
+- Hides all UI except slides overlay when using `?slides` param
 - Split content on `\n---\n` → array of slide markdown strings
 - Each slide rendered through marked + KaTeX + Mermaid pipeline
-- Navigation: arrow keys (← →), Prev/Next buttons, slide counter in header
-- Escape exits back to editor
-- Slides button hidden in viewer mode
+- Navigation: arrow keys (← →), Prev/Next buttons, side arrows, slide counter
+- Escape or × button exits back to editor
+- Example: `https://example.com/?slides#encoded_content`
 
 ## Rich content rendering
 

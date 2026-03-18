@@ -824,33 +824,23 @@ Everything you type is compressed and encoded into the URL fragment (the part af
     const previewPane = document.getElementById('previewPane');
     const foldBtn     = document.getElementById('foldBtn');
 
-    // ── Viewer mode & Slides mode ────────────────────────────────────────────
+    // ── Viewer mode ──────────────────────────────────────────────────────────
     let viewerMode = new URLSearchParams(location.search).has('view');
     let slidesAutoOpen = new URLSearchParams(location.search).has('slides');
     const viewBtn = document.getElementById('viewBtn');
 
     function setHash(encoded) {
-      const params = [];
-      if (viewerMode) params.push('view');
-      if (slidesAutoOpen) params.push('slides');
-      const prefix = params.length > 0 ? '?' + params.join('&') : '';
-      history.replaceState(null, '', prefix + '#' + encoded);
+      history.replaceState(null, '', (viewerMode ? '?view' : '') + '#' + encoded);
     }
 
     function applyViewer() {
       document.body.classList.toggle('viewer', viewerMode);
       viewBtn.textContent = viewerMode ? 'Edit' : 'View';
       if (viewerMode) {
-        const params = [];
-        if (slidesAutoOpen) params.push('slides');
-        const prefix = params.length > 0 ? '&' + params.join('&') : '';
-        const url = location.origin + location.pathname + '?view' + prefix + location.hash;
+        const url = location.origin + location.pathname + '?view' + location.hash;
         history.replaceState(null, '', url);
       } else {
-        const params = [];
-        if (slidesAutoOpen) params.push('slides');
-        const prefix = params.length > 0 ? '?' + params.join('&') : '';
-        history.replaceState(null, '', prefix + location.hash || location.href.replace(location.search, ''));
+        history.replaceState(null, '', location.hash || location.href.replace(location.search, ''));
       }
     }
 
@@ -2729,18 +2719,11 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     function applySlidesMode() {
       document.body.classList.toggle('slides-only', slidesAutoOpen);
       if (slidesAutoOpen) {
-        const params = [];
-        if (viewerMode) params.push('view');
-        params.push('slides');
-        const prefix = params.length > 0 ? '?' + params.join('&') : '';
-        history.replaceState(null, '', prefix + location.hash);
+        history.replaceState(null, '', '?slides' + location.hash);
         openSlides();
       } else {
         closeSlides();
-        const params = [];
-        if (viewerMode) params.push('view');
-        const prefix = params.length > 0 ? '?' + params.join('&') : '';
-        history.replaceState(null, '', (prefix || '') + location.hash);
+        history.replaceState(null, '', location.hash);
       }
     }
 
