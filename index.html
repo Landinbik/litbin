@@ -307,7 +307,7 @@
     .mermaid-block { overflow-x: auto; margin: 1em 0; text-align: center; }
     .mermaid-block svg { max-width: 100%; height: auto; }
     .excalidraw-wrap { position: relative; margin: 1em 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-    .excalidraw-wrap iframe { width: 100%; height: 400px; border: none; display: block; }
+    .excalidraw-wrap iframe { width: 100%; height: 450px; border: none; display: block; }
     .excalidraw-wrap .excalidraw-badge { position: absolute; top: 6px; left: 8px; font-size: 11px; color: var(--text-muted); opacity: .6; pointer-events: none; z-index: 1; }
     .md-body hr   { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
 
@@ -679,50 +679,48 @@ Everything you type is compressed and encoded into the URL fragment (the part af
     }
 
     // ── Excalidraw diagrams ─────────────────────────────────────────────────
-    const EXCALIDRAW_SRCDOC = `<!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<style>
-html,body,#root{margin:0;height:100%;overflow:hidden;font-family:sans-serif}
-.loading{display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:14px}
-</style>
+    function makeExcalidrawBlobURL() {
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>html,body,#root{margin:0;height:100%;overflow:hidden;font-family:sans-serif}
+.loading{display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:14px}</style>
 </head><body><div id="root"><div class="loading">Loading Excalidraw\u2026</div></div>
 <script type="module">
 import React from 'https://esm.sh/react@18';
 import { createRoot } from 'https://esm.sh/react-dom@18/client';
 import { Excalidraw } from 'https://esm.sh/@excalidraw/excalidraw?deps=react@18,react-dom@18';
 
-let excalidrawAPI = null;
-let debounce = null;
+let api = null, debounce = null;
 function init(data) {
+  document.getElementById('root').innerHTML = '';
   createRoot(document.getElementById('root')).render(
     React.createElement(Excalidraw, {
       initialData: data || { elements: [], appState: { viewBackgroundColor: '#ffffff' } },
-      excalidrawAPI: api => { excalidrawAPI = api; },
+      excalidrawAPI: a => { api = a; },
       onChange: () => {
         clearTimeout(debounce);
         debounce = setTimeout(() => {
-          if (!excalidrawAPI) return;
-          const els = excalidrawAPI.getSceneElements();
-          const state = excalidrawAPI.getAppState();
-          parent.postMessage({ type: 'excalidraw-update', elements: JSON.parse(JSON.stringify(els)),
-            appState: { viewBackgroundColor: state.viewBackgroundColor } }, '*');
+          if (!api) return;
+          const els = api.getSceneElements();
+          const st = api.getAppState();
+          parent.postMessage({ type: 'excalidraw-update',
+            elements: JSON.parse(JSON.stringify(els)),
+            appState: { viewBackgroundColor: st.viewBackgroundColor } }, '*');
         }, 500);
       }
     })
   );
 }
 window.addEventListener('message', e => {
-  if (e.data && e.data.type === 'excalidraw-init') {
-    init(e.data.scene);
-    _initDone = true;
-  }
+  if (e.data && e.data.type === 'excalidraw-init') init(e.data.scene);
 });
-let _initDone = false;
-setTimeout(() => { if (!_initDone) init(null); }, 3000);
-<\/script></body></html>`;
+init(null);
+</script></body></html>`;
+      return URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    }
 
-    const _excalidrawCache = new Map(); // json hash → wrap element
+    const _excalidrawCache = new Map();
+    let _excalidrawBlobURL = null;
     function renderExcalidraw(container) {
       const nodes = container.querySelectorAll('pre > code.language-excalidraw');
       for (const codeEl of nodes) {
@@ -730,12 +728,13 @@ setTimeout(() => { if (!_initDone) init(null); }, 3000);
         let scene = null;
         try { scene = JSON.parse(src); } catch(e) {}
 
-        // Reuse existing iframe if scene JSON hasn't changed
         const cached = _excalidrawCache.get(src);
         if (cached) {
           codeEl.parentElement.replaceWith(cached);
           continue;
         }
+
+        if (!_excalidrawBlobURL) _excalidrawBlobURL = makeExcalidrawBlobURL();
 
         const wrap = document.createElement('div');
         wrap.className = 'excalidraw-wrap';
@@ -746,8 +745,7 @@ setTimeout(() => { if (!_initDone) init(null); }, 3000);
         wrap.appendChild(badge);
 
         const iframe = document.createElement('iframe');
-        iframe.srcdoc = EXCALIDRAW_SRCDOC;
-        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+        iframe.src = _excalidrawBlobURL;
         wrap.appendChild(iframe);
 
         iframe.addEventListener('load', () => {
@@ -761,16 +759,13 @@ setTimeout(() => { if (!_initDone) init(null); }, 3000);
       }
     }
 
-    // Listen for scene updates from Excalidraw iframes
     window.addEventListener('message', e => {
       if (!e.data || e.data.type !== 'excalidraw-update') return;
-      // Find the iframe that sent the message and update the editor content
       const iframes = document.querySelectorAll('.excalidraw-wrap iframe');
       for (const iframe of iframes) {
         if (iframe.contentWindow === e.source) {
           const scene = { type: 'excalidraw', version: 2,
             elements: e.data.elements, appState: e.data.appState };
-          // Store updated scene JSON as data attribute for potential sync
           iframe.closest('.excalidraw-wrap').dataset.scene = JSON.stringify(scene, null, 2);
           break;
         }
