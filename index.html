@@ -619,52 +619,41 @@ int main() {
     applyTheme();
 
     // ── Codec ────────────────────────────────────────────────────────────────
-    // deflate-raw compression + 2048-char CJK alphabet (U+4E00–U+55FF)
-    // 11 bits/char vs LZ-string's 6 bits/char → ~1.8× denser URL encoding
-    const _BASE = 0x4E00, _BITS = 11, _MASK = (1 << _BITS) - 1;
+    // deflate-raw compression + base64url encoding (URL-safe ASCII, no percent-encoding)
+    // Real win is deflate vs LZ-string; base64url keeps URLs copy-pasteable
 
-    function _pack(bytes) {
-      let buf = 0, bits = 0, out = '';
-      for (const b of bytes) {
-        buf = (buf << 8) | b; bits += 8;
-        if (bits >= _BITS) {
-          bits -= _BITS;
-          out += String.fromCodePoint(_BASE + ((buf >> bits) & _MASK));
-          buf &= (1 << bits) - 1;
-        }
-      }
-      const pad = bits > 0 ? _BITS - bits : 0;
-      if (bits > 0) out += String.fromCodePoint(_BASE + ((buf << pad) & _MASK));
-      return String.fromCodePoint(_BASE + pad) + out;
+    function _toB64url(bytes) {
+      let bin = '';
+      for (const b of bytes) bin += String.fromCharCode(b);
+      return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
     }
 
-    function _unpack(str) {
-      const pad = str.codePointAt(0) - _BASE;
-      const nb  = ((str.length - 1) * _BITS - pad) >> 3;
-      const out = new Uint8Array(nb);
-      let buf = 0, bits = 0, i = 0;
-      for (let c = 1; c < str.length && i < nb; c++) {
-        buf = (buf << _BITS) | (str.codePointAt(c) - _BASE); bits += _BITS;
-        while (bits >= 8 && i < nb) { bits -= 8; out[i++] = (buf >> bits) & 0xFF; buf &= (1 << bits) - 1; }
-      }
-      return out;
+    function _fromB64url(str) {
+      const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '=');
+      const bin = atob(padded);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
     }
 
     async function encode(text) {
       const cs = new CompressionStream('deflate-raw');
       const w = cs.writable.getWriter();
       w.write(new TextEncoder().encode(text)); w.close();
-      return _pack(new Uint8Array(await new Response(cs.readable).arrayBuffer()));
+      return _toB64url(new Uint8Array(await new Response(cs.readable).arrayBuffer()));
     }
 
     async function decode(hash) {
-      if (hash.charCodeAt(0) >= _BASE) {          // new deflate+CJK format
+      try {                                         // deflate+base64url (new format)
+        const bytes = _fromB64url(hash);
         const ds = new DecompressionStream('deflate-raw');
         const w = ds.writable.getWriter();
-        w.write(_unpack(hash)); w.close();
+        w.write(bytes); w.close();
         return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
+      } catch(e) {
+        return LZString.decompressFromEncodedURIComponent(hash) || ''; // legacy LZ-string
       }
-      return LZString.decompressFromEncodedURIComponent(hash) || ''; // legacy
     }
 
     // ── Marked options ───────────────────────────────────────────────────────
@@ -872,12 +861,10 @@ int main() {
 
     // ── Init from URL ────────────────────────────────────────────────────────
     (async () => {
-      const raw  = location.hash.slice(1);
-      let   hash = raw;
-      try { hash = decodeURIComponent(raw); } catch(e) {}
+      const hash = location.hash.slice(1);
       try { editor.value = hash ? await decode(hash) : DEFAULT; } catch(e) { editor.value = DEFAULT; }
       render();
-      try { updateSize(raw ? hash : await encode(editor.value)); } catch(e) {}
+      try { updateSize(hash ? hash : await encode(editor.value)); } catch(e) {}
     })();
 
     // ── Live update ──────────────────────────────────────────────────────────

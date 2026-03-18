@@ -14,9 +14,9 @@ https://example.com/#<deflate-raw compressed, CJK-encoded markdown>
 
 - The hash fragment is never sent to the server, so there is no server-side involvement
 - Practical limit: ~200 KB markdown fits comfortably; warning appears at 500 KB encoded chars, error at 1.5 MB
-- **Codec**: `CompressionStream('deflate-raw')` → 2048-char CJK alphabet (U+4E00–U+55FF), 11 bits/char
-- **Legacy**: URLs encoded with [lz-string](https://github.com/pieroxy/lz-string) (base64url, 6 bits/char) still decode correctly; lz-string is kept on the CDN for this fallback
-- **Detection**: if the first hash character is `< U+4E00` → legacy LZ-string; `≥ U+4E00` → new format
+- **Codec**: `CompressionStream('deflate-raw')` → base64url encoding (A-Za-z0-9-_, URL-safe ASCII, never percent-encoded)
+- **Legacy**: URLs encoded with [lz-string](https://github.com/pieroxy/lz-string) still decode correctly; the decoder tries deflate first and falls back to LZ-string on failure
+- **Why not denser Unicode encoding**: non-ASCII chars in URL fragments get percent-encoded on copy (each char → 9 ASCII chars), making them worse than base64url in practice
 
 ## Stack (all CDN, no build step)
 
