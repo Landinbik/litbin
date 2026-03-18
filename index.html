@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>litbin</title>
+  <script type="importmap">
+  {"imports":{"react":"https://esm.sh/react@18","react-dom/client":"https://esm.sh/react-dom@18/client","react/jsx-runtime":"https://esm.sh/react@18/jsx-runtime"}}
+  </script>
   <link rel="stylesheet" id="hljs-theme" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <style>
@@ -306,8 +309,7 @@
     .math-block   { overflow-x: auto; margin: 1em 0; text-align: center; }
     .mermaid-block { overflow-x: auto; margin: 1em 0; text-align: center; }
     .mermaid-block svg { max-width: 100%; height: auto; }
-    .excalidraw-wrap { margin: 1em 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-    .excalidraw-wrap iframe { width: 100%; height: 450px; border: none; display: block; }
+    .excalidraw-wrap { margin: 1em 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; height: 450px; position: relative; }
     .md-body hr   { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
 
     .md-body input[type="checkbox"] { margin-right: 6px; }
@@ -677,89 +679,52 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       }
     }
 
-    // ── Excalidraw diagrams ─────────────────────────────────────────────────
-    const CLOSE_SCRIPT = '<' + '/script>';
+    // ── Excalidraw diagrams (rendered directly, no iframe) ──────────────────
+    let _excalidrawModule = null;
+    let _excalidrawCssLoaded = false;
 
-    function buildIframeHtml(id, initialData) {
-      const dataJson = JSON.stringify(initialData)
-        .replace(/<\/script>/gi, '<\\/script>');
-      return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8">
-<link rel="stylesheet" href="https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/dev/index.css">
-<script type="importmap">
-{"imports":{"react":"https://esm.sh/react@18","react-dom":"https://esm.sh/react-dom@18","react-dom/client":"https://esm.sh/react-dom@18/client","react/jsx-runtime":"https://esm.sh/react@18/jsx-runtime"}}
-${CLOSE_SCRIPT}
-<style>*{box-sizing:border-box;margin:0;padding:0}html,body,#root{height:100%}
-#err{display:flex;align-items:center;justify-content:center;height:100%;color:#f85149;font-size:13px;padding:16px;font-family:sans-serif}</style>
-</head><body><div id="root"><div id="err" style="display:none"></div></div>
-<script type="module">
-window.onerror=(msg)=>{const e=document.getElementById('err');e.textContent='Excalidraw failed: '+msg;e.style.display='flex';};
-import React from"react";
-import{createRoot}from"react-dom/client";
-import{Excalidraw}from"https://esm.sh/@excalidraw/excalidraw@0.18.0?external=react,react-dom,react/jsx-runtime";
-const initialData=${dataJson};
-let t;
-function post(els,as){clearTimeout(t);t=setTimeout(()=>parent.postMessage({type:'excalidraw-update',id:${id},elements:Array.from(els),appState:{viewBackgroundColor:as.viewBackgroundColor,theme:as.theme}},'*'),600);}
-createRoot(document.getElementById('root')).render(React.createElement(Excalidraw,{initialData,onChange:(e,a)=>post(e,a)}));
-${CLOSE_SCRIPT}
-</body></html>`;
+    async function loadExcalidraw() {
+      if (!_excalidrawCssLoaded) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.jsdelivr.net/npm/@excalidraw/excalidraw@0.18.0/dist/prod/index.css';
+        document.head.appendChild(link);
+        _excalidrawCssLoaded = true;
+      }
+      if (!_excalidrawModule) {
+        const [React, ReactDOM, Ex] = await Promise.all([
+          import('react'),
+          import('react-dom/client'),
+          import('https://esm.sh/@excalidraw/excalidraw@0.18.0?external=react,react-dom,react/jsx-runtime')
+        ]);
+        _excalidrawModule = { React: React.default || React, createRoot: ReactDOM.createRoot, Excalidraw: Ex.Excalidraw };
+      }
+      return _excalidrawModule;
     }
 
     let _excalidrawCounter = 0;
-    const _excalidrawWrapCache = new Map();
+    const _excalidrawWrapCache = new Map(); // id → { wrap, root }
 
     function pruneExcalidrawCache(newCount) {
-      for (const [id, wrap] of _excalidrawWrapCache) {
+      for (const [id, entry] of _excalidrawWrapCache) {
         if (id >= newCount) {
-          const iframe = wrap.querySelector('iframe');
-          if (iframe?.src.startsWith('blob:')) URL.revokeObjectURL(iframe.src);
+          if (entry.root) try { entry.root.unmount(); } catch(e) {}
           _excalidrawWrapCache.delete(id);
         }
       }
     }
 
-    function renderExcalidraw(container) {
-      _excalidrawCounter = 0;
-      const nodes = container.querySelectorAll('pre > code.language-excalidraw');
-      for (const codeEl of nodes) {
-        const id = _excalidrawCounter++;
-        const cached = _excalidrawWrapCache.get(id);
-        if (cached) { codeEl.parentElement.replaceWith(cached); continue; }
-
-        let initialData = null;
-        try { initialData = JSON.parse(codeEl.textContent.trim()); } catch(e) {}
-        initialData = initialData || { elements: [], appState: {} };
-
-        const blobUrl = URL.createObjectURL(
-          new Blob([buildIframeHtml(id, initialData)], { type: 'text/html' })
-        );
-        const wrap = document.createElement('div');
-        wrap.className = 'excalidraw-wrap';
-        wrap.dataset.excalidrawId = id;
-        const iframe = document.createElement('iframe');
-        iframe.src = blobUrl;
-        iframe.allow = 'clipboard-write';
-        wrap.appendChild(iframe);
-        _excalidrawWrapCache.set(id, wrap);
-        codeEl.parentElement.replaceWith(wrap);
-      }
-      pruneExcalidrawCache(_excalidrawCounter);
-    }
-
-    window.addEventListener('message', e => {
-      const msg = e.data;
-      if (!msg || msg.type !== 'excalidraw-update') return;
-      const { id, elements, appState } = msg;
-      if (!Number.isInteger(id) || id < 0 || id >= _excalidrawCounter) return;
-
-      const sceneJson = JSON.stringify({ elements, appState }, null, 2);
+    function saveExcalidrawBack(id, elements, appState) {
+      const sceneJson = JSON.stringify({
+        elements: Array.from(elements),
+        appState: { viewBackgroundColor: appState.viewBackgroundColor, theme: appState.theme }
+      }, null, 2);
       let count = -1;
       const updated = editor.value.replace(
         /^```excalidraw\n([\s\S]*?)^```/gm,
         (match) => { count++; return count === id ? '```excalidraw\n' + sceneJson + '\n```' : match; }
       );
       if (updated === editor.value) return;
-
       editor.value = updated;
       clearTimeout(urlDebounce);
       urlDebounce = setTimeout(async () => {
@@ -769,7 +734,48 @@ ${CLOSE_SCRIPT}
           updateSize(encoded);
         } catch(e) {}
       }, 400);
-    });
+    }
+
+    function renderExcalidraw(container) {
+      _excalidrawCounter = 0;
+      const nodes = container.querySelectorAll('pre > code.language-excalidraw');
+      for (const codeEl of nodes) {
+        const id = _excalidrawCounter++;
+        const cached = _excalidrawWrapCache.get(id);
+        if (cached) { codeEl.parentElement.replaceWith(cached.wrap); continue; }
+
+        let initialData = null;
+        try { initialData = JSON.parse(codeEl.textContent.trim()); } catch(e) {}
+        initialData = initialData || { elements: [], appState: {} };
+
+        const wrap = document.createElement('div');
+        wrap.className = 'excalidraw-wrap';
+        wrap.dataset.excalidrawId = id;
+        const mountPoint = document.createElement('div');
+        mountPoint.style.height = '100%';
+        wrap.appendChild(mountPoint);
+        const entry = { wrap, root: null };
+        _excalidrawWrapCache.set(id, entry);
+        codeEl.parentElement.replaceWith(wrap);
+
+        const myId = id;
+        const myData = initialData;
+        loadExcalidraw().then(({ React, createRoot, Excalidraw }) => {
+          let t;
+          function onChange(els, as) {
+            clearTimeout(t);
+            t = setTimeout(() => saveExcalidrawBack(myId, els, as), 600);
+          }
+          const root = createRoot(mountPoint);
+          entry.root = root;
+          root.render(React.createElement(Excalidraw, { initialData: myData, onChange }));
+        }).catch(err => {
+          mountPoint.textContent = 'Excalidraw failed to load: ' + err.message;
+          mountPoint.style.cssText = 'color:#f85149;padding:16px;font-size:13px;display:flex;align-items:center;justify-content:center;height:100%;';
+        });
+      }
+      pruneExcalidrawCache(_excalidrawCounter);
+    }
 
     // ── Code execution (Wandbox API) ─────────────────────────────────────────
     const EXEC_LANGS = {
