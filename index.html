@@ -456,6 +456,15 @@
     .sort-viz-legend .leg-swap::before { background: #f85149; }
     .sort-viz-legend .leg-sorted::before { background: #3fb950; }
 
+    /* ── Master viz control ── */
+    .master-viz-ctrl { display: none; align-items: center; gap: 6px; padding: 7px 10px; margin-top: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
+    .master-viz-ctrl.visible { display: flex; }
+    .master-viz-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin-right: 2px; white-space: nowrap; }
+    .master-viz-ctrl button { padding: 3px 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 4px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .master-viz-ctrl button:hover { background: var(--surface); }
+    .master-viz-ctrl button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .master-viz-ctrl input[type=range] { width: 70px; }
+
     /* ── Lit data blocks ── */
     .lit-data-block { border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 1em 0; font-family: var(--font-mono, monospace); font-size: 13px; }
     .lit-data-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 8px; }
@@ -1249,6 +1258,9 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
     ['rs'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.rust);
     ['common-lisp','commonlisp'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.lisp);
 
+    // ── Master viz sync ──────────────────────────────────────────────────────
+    const _masterVizMap = new WeakMap(); // container el → masterState
+
     // ── Lit variable system ──────────────────────────────────────────────────
     let _litVars = {};
 
@@ -1902,6 +1914,14 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       });
 
       renderFrame(0);
+
+      // Register with master viz controller if one exists in an ancestor container
+      let el = wrapEl.parentElement;
+      while (el) {
+        if (_masterVizMap.has(el)) { _masterVizMap.get(el).register({ renderFrame, frameCount: frames.length }); break; }
+        el = el.parentElement;
+      }
+
       return viz;
     }
 
@@ -2045,16 +2065,108 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       if (existing) existing.remove();
       const hasRun = container.querySelector('.run-btn');
       if (!hasRun) return;
+
       const btnContainer = document.createElement('div');
       btnContainer.className = 'action-buttons';
+
       const runAllBtn = document.createElement('button');
       runAllBtn.textContent = '▶ Run all';
       runAllBtn.addEventListener('click', () => runAllCode(container));
       btnContainer.appendChild(runAllBtn);
+
       const vizAllBtn = document.createElement('button');
       vizAllBtn.textContent = '▶ Visualize all';
       vizAllBtn.addEventListener('click', () => visualizeAllSorts(container));
       btnContainer.appendChild(vizAllBtn);
+
+      // ── Master viz control bar ──────────────────────────────────────────────
+      const masterCtrl = document.createElement('div');
+      masterCtrl.className = 'master-viz-ctrl';
+
+      const masterLabel = document.createElement('span');
+      masterLabel.className = 'master-viz-label';
+      masterLabel.textContent = 'All';
+
+      const masterPrev = document.createElement('button');
+      masterPrev.textContent = '⏮';
+      masterPrev.title = 'Previous step (all)';
+      const masterPlay = document.createElement('button');
+      masterPlay.textContent = '▶';
+      masterPlay.title = 'Play/Pause (all)';
+      const masterNext = document.createElement('button');
+      masterNext.textContent = '⏭';
+      masterNext.title = 'Next step (all)';
+
+      const masterSpeedLabel = document.createElement('span');
+      masterSpeedLabel.textContent = 'Speed:';
+      const masterSpeed = document.createElement('input');
+      masterSpeed.type = 'range';
+      masterSpeed.min = '1';
+      masterSpeed.max = '10';
+      masterSpeed.value = '5';
+
+      const masterFrame = document.createElement('span');
+      masterFrame.className = 'sort-viz-frame';
+
+      masterCtrl.append(masterLabel, masterPrev, masterPlay, masterNext, masterSpeedLabel, masterSpeed, masterFrame);
+      btnContainer.appendChild(masterCtrl);
+
+      // Master state
+      const ms = {
+        vizzes: [],
+        frame: 0,
+        playing: false,
+        interval: null,
+        maxFrames() { return this.vizzes.length ? Math.max(...this.vizzes.map(v => v.frameCount)) : 0; },
+        register(api) {
+          this.vizzes.push(api);
+          masterCtrl.classList.add('visible');
+          this.updateUI();
+        },
+        go(f) {
+          this.frame = Math.max(0, Math.min(f, this.maxFrames() - 1));
+          this.vizzes.forEach(v => v.renderFrame(Math.min(this.frame, v.frameCount - 1)));
+          this.updateUI();
+        },
+        getDelay() { return Math.round(1000 / Number(masterSpeed.value)); },
+        play() {
+          this.playing = true;
+          masterPlay.textContent = '⏸';
+          masterPlay.classList.add('active');
+          this.interval = setInterval(() => {
+            if (this.frame >= this.maxFrames() - 1) { this.pause(); return; }
+            this.go(this.frame + 1);
+          }, this.getDelay());
+        },
+        pause() {
+          this.playing = false;
+          masterPlay.textContent = '▶';
+          masterPlay.classList.remove('active');
+          clearInterval(this.interval);
+        },
+        updateUI() {
+          const total = this.maxFrames();
+          masterFrame.textContent = total ? `${this.frame + 1} / ${total}` : '';
+        },
+      };
+
+      masterPrev.addEventListener('click', () => { ms.pause(); ms.go(ms.frame - 1); });
+      masterNext.addEventListener('click', () => { ms.pause(); ms.go(ms.frame + 1); });
+      masterPlay.addEventListener('click', () => {
+        if (ms.playing) { ms.pause(); return; }
+        if (ms.frame >= ms.maxFrames() - 1) ms.go(0);
+        ms.play();
+      });
+      masterSpeed.addEventListener('input', () => {
+        if (ms.playing) { clearInterval(ms.interval); ms.interval = setInterval(() => {
+          if (ms.frame >= ms.maxFrames() - 1) { ms.pause(); return; }
+          ms.go(ms.frame + 1);
+        }, ms.getDelay()); }
+      });
+
+      _masterVizMap.set(container, ms);
+      // ───────────────────────────────────────────────────────────────────────
+
       const firstCode = container.querySelector('.code-block-wrap');
       if (firstCode) firstCode.parentElement.insertBefore(btnContainer, firstCode);
     }
