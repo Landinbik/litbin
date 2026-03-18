@@ -695,7 +695,7 @@ Everything you type is compressed and encoded into the URL fragment (the part af
         const [React, ReactDOM, Ex] = await Promise.all([
           import('react'),
           import('react-dom/client'),
-          import('https://esm.sh/@excalidraw/excalidraw@0.18.0?external=react,react-dom,react/jsx-runtime')
+          import('https://esm.sh/@excalidraw/excalidraw@0.18.0?external=react,react-dom')
         ]);
         _excalidrawModule = { React: React.default || React, createRoot: ReactDOM.createRoot, Excalidraw: Ex.Excalidraw };
       }
