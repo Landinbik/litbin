@@ -27,23 +27,55 @@ Ideas for future improvements. None are committed to.
 
 ## Remaining ideas
 
-### Password-protected pastes
-Use Web Crypto API (PBKDF2 → AES-GCM) to encrypt compressed bytes with a user-supplied password. Salt + IV + ciphertext go in the URL hash with a prefix to distinguish from plain pastes. On load, detect prefix → prompt for password → decrypt. ~40-50 lines of JS, no extra libraries.
+<!-- sorted: easiest → hardest; within same difficulty, highest benefit first -->
 
-### Table of contents
-Auto-generate from headings. Collapsible sidebar or injected at top of preview.
+### PDF export — *Low*
+Add `@media print` CSS: hide header, editor, everything except `#preview`. "Export PDF" button calls `window.print()` — browser handles layout and pagination, user saves as PDF from print dialog. Optional: `@page` CSS for margins and page size. (`window.print()` is the right call — jsPDF/html2canvas adds ~500 KB of CDN weight for worse results.)
 
-### Export as standalone HTML
-Serialize the rendered preview into a self-contained HTML file and trigger a browser download. Zero backend.
+### Viewer mode (read-only, shareable) — *Low*
+URL param `?view` (or a "View" button) hides editor pane and all header controls except Theme; preview pane goes fullscreen. Shareable: copy URL with `?view` appended — recipient sees rendered doc immediately. Can be combined with slides mode (`?view&slides`). Mostly CSS show/hide, reuses existing render pipeline entirely.
 
-### Find / replace
-Ctrl+H in the textarea. Simple floating panel.
-
-### Keyboard shortcuts cheat sheet
+### Keyboard shortcuts cheat sheet — *Low*
 Modal or tooltip showing all keybindings (Tab, Shift+Tab, Enter in lists, Escape in live mode, etc.).
 
-### Edit history (localStorage)
+### Dynamic sort_print docs — *Low*
+In `openDocs()` (lazy render), replace the hardcoded implementations section of `DOCS_MD` with dynamically built HTML: iterate `Object.entries(SORT_PREAMBLES)` (skipping aliases), wrap each in a `<pre><code>` block with hljs highlighting. Removes ~80 lines of duplicated content from the `DOCS_MD` string. Single source of truth: editing a preamble auto-updates the docs.
+
+### Find / replace — *Low-Medium*
+Ctrl+H in the textarea. Simple floating panel.
+
+### Mobile formatting toolbar — *Low-Medium*
+Floating buttons for bold, italic, code, link — mobile keyboards lack the special keys needed for markdown shortcuts.
+
+### HTML export — *Low-Medium*
+Serialize `preview.innerHTML` into a full `<!DOCTYPE html>` shell, inline the app's CSS into a `<style>` tag, and trigger a `<a download="document.html">` blob URL click. KaTeX and Mermaid output is already static HTML/SVG — works as-is. Excalidraw components won't be interactive in the export (show static placeholder).
+
+### Edit history (localStorage) — *Low-Medium*
 Store last N URL hashes in localStorage. Navigate backward through edits. Lightweight undo across page reloads.
 
-### Mobile formatting toolbar
-Floating buttons for bold, italic, code, link — mobile keyboards lack the special keys needed for markdown shortcuts.
+### Table of contents — *Low-Medium*
+Auto-generate from headings. Collapsible sidebar or injected at top of preview.
+
+### PDF viewing mode (paper view) — *Low-Medium*
+CSS-only print-preview simulation. Toggle via "Paper" button — applies `.paper-view` class to preview. Each "page" is a fixed-height div with box-shadow border and margin between pages; `break-after: page` and fixed page dimensions. No PDF.js needed — purely visual. (True PDF.js + html2canvas pipeline would be **High** difficulty for low gain.)
+
+### Custom right-click context menu — *Low-Medium*
+`contextmenu` listener on `#editor` — `e.preventDefault()`, position a `.ctx-menu` div at `(e.clientX, e.clientY)`, dismiss on click-outside/Escape. Items: Insert code block, Insert table, Insert image, Insert heading, Bold, Italic, HR — each calls `insertAtCursor(editor, text)` at `selectionStart`. Extend to preview pane with read-only actions (copy block, copy as HTML). Pairs well with table improvements.
+
+### Slides mode — *Medium*
+"Slides" button enters fullscreen overlay view. Split `getEditorContent()` on `\n---\n` → array of slide markdown strings, render each through the full marked + KaTeX + Mermaid pipeline. Show one slide at a time; ← → arrow keys and on-screen buttons navigate. CSS: centered content, large font, slide counter, theme-aware background. Esc exits. (`---` already renders as `<hr>` in markdown — slides mode intercepts before marked.)
+
+### Better tables (editor + live view) — *Medium*
+Tab in a table row jumps to next cell (detect `|` delimiters in current line — needs priority over existing tab=2-spaces handler). Enter in last cell appends a new row with matching column count. Context menu "Insert table" opens a grid picker (like Google Docs) to choose NxM dimensions. Live mode: table blocks get a structured cell editor instead of raw textarea. Optional: auto-align column widths on save.
+
+### Password-protected pastes — *Medium*
+Use Web Crypto API (PBKDF2 → AES-GCM) to encrypt compressed bytes with a user-supplied password. Salt + IV + ciphertext go in the URL hash with a prefix to distinguish from plain pastes. On load, detect prefix → prompt for password → decrypt. ~40-50 lines of JS, no extra libraries.
+
+### Image resizing with drag — *Medium*
+After render, attach a resize handle (`<div class="img-resize-handle">`) to each `<img>` in preview. `mousedown` → track `mousemove` → update `img.style.width` live. `mouseup` → write back to markdown: find the matching `![alt](src)` in `editor.value`, replace with `<img src="..." width="Npx" alt="...">` (marked passes through HTML `<img>` tags). Handle touch events for mobile. Tricky part: reliable matching of image by src when writing back.
+
+### Venn / set diagram blocks — *Medium*
+New ` ```venn ``` ` fence type. Parse syntax: `A = {1,2,3}`, `B = {3,4,5}`, optional `show: A∩B` directives. Compute unions/intersections/differences in JS. Render as custom SVG (overlapping circles with labels) — no library needed for 2–3 sets. Hook into `render()` like mermaid. Theme-aware fill colors. Keep scope to 2–3 sets (4+ require Euler diagrams, much harder).
+
+### Live collaboration rooms — *High*
+P2P editing via WebRTC using PeerJS (free public signaling, no backend). URL structure: `?room=ROOMID#content`. Room creator generates random ID, opens PeerJS host, broadcasts editor diffs to all peers. Joiner connects, receives full doc on join, applies patches. Conflict resolution: last-write-wins with logical timestamp (simple) or OT/CRDT (complex). PeerJS public signaling is free but not guaranteed uptime.
