@@ -375,6 +375,7 @@
     <button class="btn" id="importBtn">Import</button>
     <input type="file" id="importFile" accept=".md,.txt,text/markdown,text/plain" style="display:none">
     <button class="btn primary" id="shareBtn">Copy URL</button>
+    <button class="btn" id="shortBtn">Short URL</button>
   </header>
 
   <div class="tab-bar">
@@ -931,6 +932,24 @@ int main() {
       navigator.clipboard.writeText(location.href)
         .then(() => showToast('URL copied to clipboard'))
         .catch(() => showToast('Copy failed — select the address bar manually'));
+    });
+
+    // ── Short URL ─────────────────────────────────────────────────────────────
+    const shortBtn = document.getElementById('shortBtn');
+    shortBtn.addEventListener('click', async () => {
+      shortBtn.disabled = true;
+      shortBtn.textContent = '…';
+      try {
+        const res = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(location.href));
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const short = await res.text();
+        await navigator.clipboard.writeText(short.trim());
+        showToast('Short URL copied!');
+      } catch(e) {
+        showToast('Shortening failed: ' + e.message);
+      }
+      shortBtn.disabled = false;
+      shortBtn.textContent = 'Short URL';
     });
 
     // ── Import ───────────────────────────────────────────────────────────────
