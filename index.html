@@ -1548,9 +1548,13 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       let currentFrame = 0;
       let playing = false;
       let interval = null;
+      let greenTimers = [];
       const isLastFrame = () => currentFrame === frames.length - 1;
 
       function renderFrame(idx) {
+        greenTimers.forEach(t => clearTimeout(t));
+        greenTimers = [];
+
         currentFrame = Math.max(0, Math.min(idx, frames.length - 1));
         const frame = frames[currentFrame];
         const row = frame.rows[0] || { values: [], compare: new Set(), swap: new Set() };
@@ -1569,11 +1573,19 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
             bar.className = 'sort-viz-bar';
             if (row.compare.has(i)) bar.classList.add('compare');
             else if (row.swap.has(i)) bar.classList.add('swap');
-            else if (lastFrame && !hasAnnotations) bar.classList.add('sorted');
             labels[i].textContent = barCount <= 30 ? v : '';
             labels[i].style.display = barCount <= 30 ? '' : 'none';
           } else {
             bar.style.display = 'none';
+          }
+        }
+
+        if (lastFrame && !hasAnnotations) {
+          const step = Math.min(40, Math.round(500 / barCount));
+          for (let i = 0; i < barCount; i++) {
+            if (bars[i].style.display !== 'none') {
+              greenTimers.push(setTimeout(() => bars[i].classList.add('sorted'), i * step));
+            }
           }
         }
       }
