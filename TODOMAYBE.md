@@ -25,8 +25,8 @@ CJK chars get percent-encoded on copy (%E4%B8%80 → 9 chars each), making URLs 
 
 ## Remaining ideas
 
-### Mermaid diagrams
-Render fenced ` ```mermaid ``` ` blocks as flowcharts, sequence diagrams, etc. One CDN script. Natural fit for a literate programming tool.
+### ~~Mermaid diagrams~~ ✓ done
+Implemented via mermaid@11 CDN. Fenced ` ```mermaid ``` ` blocks render as SVG diagrams. Theme-aware (light/dark).
 
 ### Word count / reading time
 Cheap to add to the header bar alongside the URL size indicator.

@@ -230,6 +230,8 @@
 
     .md-body img  { max-width: 100%; border-radius: 4px; }
     .math-block   { overflow-x: auto; margin: 1em 0; text-align: center; }
+    .mermaid-block { overflow-x: auto; margin: 1em 0; text-align: center; }
+    .mermaid-block svg { max-width: 100%; height: auto; }
     .md-body hr   { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
 
     .md-body input[type="checkbox"] { margin-right: 6px; }
@@ -408,6 +410,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/nim.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/d.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
   <script>
     const DEFAULT = `# Merge Sort — Literate Programming
 
@@ -416,6 +419,19 @@ Merge sort is a classic divide-and-conquer algorithm. It recursively splits an a
 **Time complexity:** $O(n \\log n)$ in all cases — **Space complexity:** $O(n)$ auxiliary
 
 The recurrence is $T(n) = 2T(n/2) + O(n)$, which by the Master Theorem gives $T(n) = O(n \\log n)$.
+
+---
+
+## Call graph
+
+\`\`\`mermaid
+graph TD
+    A[mergesort arr] -->|split| B[mergesort left]
+    A -->|split| C[mergesort right]
+    B --> D[merge]
+    C --> D
+    D --> E[sorted array]
+\`\`\`
 
 ---
 
@@ -614,6 +630,8 @@ int main() {
       hljsLink.href = dark
         ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'
         : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+      if (typeof mermaid !== 'undefined')
+        mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default' });
     }
     themeBtn.addEventListener('click', () => { dark = !dark; applyTheme(); });
     applyTheme();
@@ -684,6 +702,32 @@ int main() {
           renderer(t) { return renderMath(t.math, false); }
         }
       ]});
+    }
+
+    // ── Mermaid diagrams ──────────────────────────────────────────────────────
+    if (typeof mermaid !== 'undefined') {
+      mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default' });
+    }
+
+    let _mermaidId = 0;
+    async function renderMermaid(container) {
+      if (typeof mermaid === 'undefined') return;
+      const nodes = container.querySelectorAll('pre > code.language-mermaid');
+      for (const codeEl of nodes) {
+        const src = codeEl.textContent;
+        const pre = codeEl.parentElement;
+        const div = document.createElement('div');
+        div.className = 'mermaid-block';
+        try {
+          const id = 'mermaid-' + (++_mermaidId);
+          const { svg } = await mermaid.render(id, src);
+          div.innerHTML = svg;
+        } catch(e) {
+          div.textContent = 'Mermaid error: ' + e.message;
+          div.style.color = '#f85149';
+        }
+        pre.replaceWith(div);
+      }
     }
 
     // ── Code execution (Wandbox API) ─────────────────────────────────────────
@@ -850,6 +894,7 @@ int main() {
       if (typeof hljs !== 'undefined')
         preview.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
       attachRunButtons(preview);
+      renderMermaid(preview);
     }
 
     // ── Size indicator ───────────────────────────────────────────────────────
@@ -993,6 +1038,7 @@ int main() {
       if (typeof hljs !== 'undefined')
         d.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
       attachRunButtons(d);
+      renderMermaid(d);
       return d;
     }
 
