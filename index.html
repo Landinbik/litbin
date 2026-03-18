@@ -197,9 +197,11 @@
       color: var(--text-muted);
       background: var(--bg);
       border-right: 1px solid var(--border);
-      overflow: hidden;
+      overflow-y: scroll;
+      scrollbar-width: none;
       user-select: none;
     }
+    #lineNums::-webkit-scrollbar { display: none; }
     #editor {
       flex: 1;
       width: 100%;
