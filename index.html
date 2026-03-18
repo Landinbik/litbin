@@ -1032,11 +1032,11 @@ int main() {
           ta.addEventListener('input', () => {
             liveSegs[i] = { type: 'block', text: ta.value };
             const val = ta.value, cursor = ta.selectionStart;
-            const nl2 = val.indexOf('\n\n');
-
             const insideFence = (text, pos) => (text.slice(0, pos).match(/^```/mg) || []).length % 2 === 1;
+            let nl2 = -1;
+            { let s = 0, p; while ((p = val.indexOf('\n\n', s)) !== -1) { if (!insideFence(val, p)) { nl2 = p; break; } s = p + 1; } }
 
-            if (nl2 !== -1 && !insideFence(val, nl2)) {
+            if (nl2 !== -1) {
               // Split on double-newline immediately
               const before = val.slice(0, nl2);
               const rest   = val.slice(nl2 + 2);
