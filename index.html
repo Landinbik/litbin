@@ -476,6 +476,33 @@
       #editorPane, #previewPane { display: none; flex: 1; }
       #editorPane.mobile-active, #previewPane.mobile-active { display: flex; }
     }
+
+    /* ── Viewer mode ── */
+    body.viewer #wordCount,
+    body.viewer #urlSize,
+    body.viewer .settings-wrap,
+    body.viewer #foldBtn,
+    body.viewer #modeBtn,
+    body.viewer #importBtn,
+    body.viewer #exportBtn,
+    body.viewer #pdfBtn,
+    body.viewer #shareBtn,
+    body.viewer #shortBtn,
+    body.viewer #docsBtn { display: none !important; }
+    body.viewer #editorPane,
+    body.viewer #divider,
+    body.viewer .pane-label { display: none !important; }
+    body.viewer #previewPane { flex: 1 !important; }
+
+    @media print {
+      @page { margin: 1.5cm; }
+      html, body { height: auto; overflow: visible; }
+      header, .tab-bar, #editorPane, #divider, .pane-label,
+      #docsOverlay, #toast, #livePane, .run-btn, .sort-viz { display: none !important; }
+      main { overflow: visible; display: block; }
+      #previewPane { display: block !important; overflow: visible; }
+      #preview { overflow: visible; padding: 0; height: auto; }
+    }
   </style>
 </head>
 <body>
@@ -495,7 +522,9 @@
     <button class="btn" id="themeBtn">Dark</button>
     <button class="btn" id="importBtn">Import</button>
     <button class="btn" id="exportBtn">Export</button>
+    <button class="btn" id="pdfBtn">PDF</button>
     <input type="file" id="importFile" accept=".md,.txt,text/markdown,text/plain" style="display:none">
+    <button class="btn" id="viewBtn">View</button>
     <button class="btn primary" id="shareBtn">Copy URL</button>
     <button class="btn" id="shortBtn">Short URL</button>
     <button class="btn" id="docsBtn" title="Documentation">?</button>
@@ -722,6 +751,28 @@ Everything you type is compressed and encoded into the URL fragment (the part af
     const previewPane = document.getElementById('previewPane');
     const foldBtn     = document.getElementById('foldBtn');
 
+    // ── Viewer mode ──────────────────────────────────────────────────────────
+    let viewerMode = new URLSearchParams(location.search).has('view');
+    const viewBtn = document.getElementById('viewBtn');
+
+    function setHash(encoded) {
+      history.replaceState(null, '', (viewerMode ? '?view' : '') + '#' + encoded);
+    }
+
+    function applyViewer() {
+      document.body.classList.toggle('viewer', viewerMode);
+      viewBtn.textContent = viewerMode ? 'Edit' : 'View';
+      if (viewerMode) {
+        const url = location.origin + location.pathname + '?view' + location.hash;
+        history.replaceState(null, '', url);
+      } else {
+        history.replaceState(null, '', location.hash || location.href.replace(location.search, ''));
+      }
+    }
+
+    viewBtn.addEventListener('click', () => { viewerMode = !viewerMode; applyViewer(); });
+    applyViewer();
+
     // ── Excalidraw fold/unfold ────────────────────────────────────────────────
     let _drawingsFolded = false;
     const _foldedData = new Map(); // block index → real JSON string
@@ -939,7 +990,7 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       urlDebounce = setTimeout(async () => {
         try {
           const encoded = await encode(getEditorContent());
-          history.replaceState(null, '', '#' + encoded);
+          setHash(encoded);
           updateSize(encoded);
         } catch(e) {}
       }, 400);
@@ -1882,7 +1933,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       urlDebounce = setTimeout(async () => {  // debounce only the URL write
         try {
           const encoded = await encode(getEditorContent());
-          history.replaceState(null, '', '#' + encoded);
+          setHash(encoded);
           updateSize(encoded);
         } catch(e) { console.warn('URL sync failed:', e); }
       }, 400);
@@ -1932,7 +1983,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         editor.value = e.target.result;
         render();
         const encoded = await encode(getEditorContent());
-        history.replaceState(null, '', '#' + encoded);
+        setHash(encoded);
         updateSize(encoded);
         showToast('Imported ' + file.name);
       };
@@ -1952,6 +2003,9 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       URL.revokeObjectURL(a.href);
       showToast('Exported litbin.md');
     });
+
+    // ── PDF ──────────────────────────────────────────────────────────────────
+    document.getElementById('pdfBtn').addEventListener('click', () => window.print());
 
     // ── Toast ────────────────────────────────────────────────────────────────
     let toastTimer;
@@ -2241,7 +2295,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       liveDebounce = setTimeout(async () => {
         try {
           const encoded = await encode(getEditorContent());
-          history.replaceState(null, '', '#' + encoded);
+          setHash(encoded);
           updateSize(encoded);
         } catch(e) {}
       }, 400);

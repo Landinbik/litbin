@@ -22,6 +22,8 @@ Ideas for future improvements. None are committed to.
 - ~~**Excalidraw whiteboards**~~ — Interactive drawing in ` ```excalidraw ``` ` blocks, direct rendering (no iframe), save-back to markdown source, fold by default, edit button in live mode
 - ~~**Sort visualizer**~~ — `sort:LANG` fenced blocks animate sorting algorithms; `sort_print(arr, compare=, swap=)` injected automatically for Python, JS, TS, Ruby, C++, Rust, Lisp; left-to-right green sweep on completion
 - ~~**Docs modal**~~ — `?` button in header opens full feature reference (languages, sort_print implementations, limits, etc.)
+- ~~**PDF export**~~ — "PDF" button calls `window.print()`; `@media print` CSS hides everything except `#preview`; `@page` sets 1.5 cm margins
+- ~~**Viewer mode**~~ — "View" button / `?view` URL param hides editor and all controls except Theme; preview goes fullscreen; "Edit" button exits; shareable URL preserves `?view`
 
 ---
 
@@ -29,11 +31,8 @@ Ideas for future improvements. None are committed to.
 
 <!-- sorted: easiest → hardest; within same difficulty, highest benefit first -->
 
-### PDF export — *Low*
-Add `@media print` CSS: hide header, editor, everything except `#preview`. "Export PDF" button calls `window.print()` — browser handles layout and pagination, user saves as PDF from print dialog. Optional: `@page` CSS for margins and page size. (`window.print()` is the right call — jsPDF/html2canvas adds ~500 KB of CDN weight for worse results.)
-
-### Viewer mode (read-only, shareable) — *Low*
-URL param `?view` (or a "View" button) hides editor pane and all header controls except Theme; preview pane goes fullscreen. Shareable: copy URL with `?view` appended — recipient sees rendered doc immediately. Can be combined with slides mode (`?view&slides`). Mostly CSS show/hide, reuses existing render pipeline entirely.
+### PDF export customization — *Low*
+Obsidian-style print options panel before calling `window.print()`: paper size (A4, Letter, Legal — via `@page { size: ... }`), content scaling (zoom % applied to `#preview` before print), and margins (none / narrow / normal / wide). Small modal or popover that sets CSS vars / inline styles, then calls `window.print()`, then resets them.
 
 ### Keyboard shortcuts cheat sheet — *Low*
 Modal or tooltip showing all keybindings (Tab, Shift+Tab, Enter in lists, Escape in live mode, etc.).
