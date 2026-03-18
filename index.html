@@ -563,17 +563,53 @@ def fib(n):
 print([fib(i) for i in range(10)])
 \`\`\`
 
-**Sort visualizer** — use \\\`sort:lang\\\` to animate algorithms:
+**Sort visualizer** — use \\\`sort:lang\\\` to animate algorithms. Print the array each step:
 
 \`\`\`sort:python
-import random
-arr = random.sample(range(1, 21), 12)
+# Insertion sort — prints [active] elements
+arr = [8, 3, 12, 1, 9, 5, 15, 2, 7, 10, 4, 6]
 print(*arr)
-for i in range(len(arr)):
-    for j in range(len(arr)-1-i):
-        if arr[j] > arr[j+1]:
-            arr[j], arr[j+1] = arr[j+1], arr[j]
-    print(*arr)
+for i in range(1, len(arr)):
+    key = arr[i]
+    j = i - 1
+    while j >= 0 and arr[j] > key:
+        arr[j + 1] = arr[j]
+        j -= 1
+    arr[j + 1] = key
+    out = []
+    for k, v in enumerate(arr):
+        out.append(f"[{v}]" if k == j + 1 else str(v))
+    print(*out)
+\`\`\`
+
+\`\`\`sort:python
+# Merge sort — labels each phase
+def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+    return merge(left, right)
+
+def merge(left, right):
+    result = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i]); i += 1
+        else:
+            result.append(right[j]); j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    print(f"# merge {left} + {right}")
+    print(*result)
+    return result
+
+arr = [8, 3, 12, 1, 9, 5, 15, 2]
+print("# unsorted")
+print(*arr)
+merge_sort(arr)
 \`\`\`
 
 ---
