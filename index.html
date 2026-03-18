@@ -346,10 +346,67 @@
     #liveContent {
       max-width: 760px;
       margin: 0 auto;
-      padding: 40px 28px 160px;
-      width: 100%;
+      padding: 40px 28px 160px 40px;
+      width: 95%;
     }
+    #liveContent.has-viz-inline {
+      max-width: none;
+    }
+    /* ── Command palette ── */
+    .cmd-palette-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 2000;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 14vh;
+    }
+    .cmd-palette-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: 520px;
+      max-width: 92vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+    #cmdInput {
+      width: 100%;
+      padding: 13px 18px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    .cmd-list { max-height: 340px; overflow-y: auto; }
+    .cmd-item {
+      padding: 9px 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .cmd-item.active { background: var(--surface); }
+    .cmd-item-icon { font-size: 13px; width: 22px; text-align: center; color: var(--accent); flex-shrink: 0; font-family: var(--font-mono, monospace); }
+    .cmd-item-label { flex: 1; }
+    .cmd-item-section {
+      padding: 6px 18px 3px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-muted);
+    }
+
     .live-block {
+      position: relative;
       border-radius: 5px;
       padding: 2px 8px;
       margin: 0 -8px;
@@ -358,6 +415,29 @@
       transition: background 0.1s;
     }
     .live-block:hover { background: var(--surface); }
+    .drag-handle {
+      position: absolute;
+      left: -22px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 28px;
+      cursor: grab;
+      opacity: 0;
+      color: var(--text-muted);
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.15s;
+      user-select: none;
+      border-radius: 3px;
+    }
+    .live-block:hover .drag-handle { opacity: 0.6; }
+    .drag-handle:hover { opacity: 1 !important; background: var(--surface); }
+    .live-block.dragging { opacity: 0.3; pointer-events: none; }
+    .live-block.drag-over-top    { box-shadow: 0 -2px 0 var(--accent); }
+    .live-block.drag-over-bottom { box-shadow: 0 2px 0 var(--accent); }
     /* Suppress inner margins — spacing comes from explicit spacer divs */
     .live-block > *:first-child { margin-top: 0 !important; }
     .live-block > *:last-child  { margin-bottom: 0 !important; }
@@ -408,12 +488,12 @@
       gap: 20px;
     }
     .viz-inline .code-block-left {
-      flex: 0 0 380px;
+      flex: 0 0 54%;
       min-width: 0;
     }
     .viz-inline .sort-viz {
-      flex: 1 1 320px;
-      min-width: 0;
+      flex: 1 1 0;
+      min-width: 260px;
       border-top: 1px solid var(--border);
       border-radius: 6px;
     }
@@ -621,6 +701,13 @@
     <button class="btn" id="docsBtn" title="Documentation">?</button>
   </header>
 
+  <div class="cmd-palette-overlay" id="cmdPalette" style="display:none">
+    <div class="cmd-palette-box">
+      <input id="cmdInput" type="text" placeholder="Type a command or insert block…" autocomplete="off" spellcheck="false">
+      <div id="cmdList" class="cmd-list"></div>
+    </div>
+  </div>
+
   <div class="docs-overlay" id="docsOverlay">
     <div class="docs-box">
       <div class="docs-head">
@@ -702,23 +789,23 @@ A literate markdown pastebin. No accounts, no databases, no backend. **Your enti
 
 ## Sort visualizer
 
-Use \`sort:lang\` as the fence tag to animate sorting algorithms. Define your dataset once in a \`data\` block — inject it into every implementation with \`{varname}\` in the fence tag:
+Use \`sort:lang\` as the fence tag to animate sorting algorithms. Define your dataset once in a \`data\` block — inject it into every implementation with \`{varname}\` in the fence tag. At n=30, O(n²) insertion sort loses to O(n log n) merge/quicksort:
 
 \`\`\`data
-arr = random(12, 1, 20)
+arr = random(30, 1, 100)
 \`\`\`
 
 \`\`\`sort:python {arr}
-# Insertion sort -- sort_print is built in, arr injected from the data block
+# Insertion sort -- O(n^2): sort_print on every comparison so the quadratic work is visible
 sort_print(arr)
 for i in range(1, len(arr)):
     key = arr[i]
     j = i - 1
     while j >= 0 and arr[j] > key:
         arr[j+1] = arr[j]
+        sort_print(arr, compare=j, swap=j+1)
         j -= 1
     arr[j+1] = key
-    sort_print(arr, swap=j+1, compare=range(j+2, i+1))
 sort_print(arr)
 \`\`\`
 
@@ -744,18 +831,24 @@ sort_print(disp)
 \`\`\`
 
 \`\`\`sort:lisp {arr}
-; Quicksort -- 1/3 pivot, arr injected from the data block
+; Quicksort -- median-of-three pivot
 (defun swap-el (a i j) (rotatef (aref a i) (aref a j)))
+(defun median-of-three (a lo hi)
+  (let ((mid (floor (+ lo hi) 2)))
+    (when (> (aref a lo) (aref a mid)) (swap-el a lo mid))
+    (when (> (aref a lo) (aref a hi))  (swap-el a lo hi))
+    (when (> (aref a mid) (aref a hi)) (swap-el a mid hi))
+    mid))
 (defun qs-partition (a lo hi)
-  (let* ((pi (+ lo (floor (- hi lo) 3))) (pv (aref a pi)))
-    (swap-el a pi hi)
+  (let* ((pi (median-of-three a lo hi)) (pv (aref a pi)))
+    (swap-el a pi (1- hi))
     (let ((store lo))
-      (loop for i from lo below hi do
+      (loop for i from lo below (1- hi) do
         (when (< (aref a i) pv)
           (sort-print a :compare (list i store))
           (swap-el a i store)
           (incf store)))
-      (swap-el a store hi) store)))
+      (swap-el a store (1- hi)) store)))
 (defun quicksort (a lo hi)
   (when (< lo hi)
     (let ((p (qs-partition a lo hi)))
@@ -764,6 +857,31 @@ sort_print(disp)
       (quicksort a (1+ p) hi))))
 (sort-print arr)
 (quicksort arr 0 (1- (length arr)))
+(sort-print arr)
+\`\`\`
+
+\`\`\`sort:lisp {arr}
+; Merge sort -- functional style with list operations
+(defun small (lst) (null (cdr lst)))
+(defun left-half (lst) (subseq lst 0 (floor (length lst) 2)))
+(defun right-half (lst) (subseq lst (floor (length lst) 2)))
+(defun merge-lists (list1 list2)
+  (merge 'list list1 list2 #'<))
+(defun merge-sort (lst)
+  (if (small lst) lst
+      (merge-lists (merge-sort (left-half lst))
+                   (merge-sort (right-half lst)))))
+; Instrumented wrapper -- writes merged sublists back to arr for visualization
+(defun ms-vis (lst start)
+  (if (small lst) lst
+      (let* ((mid (floor (length lst) 2))
+             (sorted (merge-lists (ms-vis (left-half lst) start)
+                                  (ms-vis (right-half lst) (+ start mid)))))
+        (loop for v in sorted for i from start do
+          (setf (aref arr i) v) (sort-print arr :swap i))
+        sorted)))
+(sort-print arr)
+(ms-vis (coerce arr 'list) 0)
 (sort-print arr)
 \`\`\`
 
@@ -1604,6 +1722,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       const spec = EXEC_LANGS[lang.toLowerCase()];
       if (!spec) return;
 
+      _litVars = extractLitVars(getEditorContent());
       btn.disabled    = true;
       btn.textContent = '⏳';
       outEl.className = 'code-output visible';
@@ -1950,8 +2069,12 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
 
       renderFrame(0);
 
-      // Side-by-side layout when inside a live-block
-      if (wrapEl.closest('.live-block')) wrapEl.classList.add('viz-inline');
+      // Side-by-side layout when inside live mode
+      const liveContentEl = document.getElementById('liveContent');
+      if (liveContentEl && liveContentEl.contains(wrapEl)) {
+        wrapEl.classList.add('viz-inline');
+        liveContentEl.classList.add('has-viz-inline');
+      }
 
       // Register with master viz controller if one exists in an ancestor container
       let el = wrapEl.parentElement;
@@ -1968,6 +2091,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       const spec = EXEC_LANGS[lang.toLowerCase()];
       if (!spec) return;
 
+      _litVars = extractLitVars(getEditorContent());
       btn.disabled = true;
       btn.textContent = '⏳';
       outEl.className = 'code-output visible';
@@ -2692,6 +2816,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     let liveActiveIdx = null; // index of active block seg (always type:'block')
     let nextActiveIdx = null; // set on mousedown so blur knows where to go next
     let liveCursorPos = null; // cursor position to restore after re-render
+    let _dragSrcIdx   = null; // segment index being dragged
 
     function segmentize(md) {
       const lines = md.split('\n');
@@ -2752,7 +2877,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     liveContent.addEventListener('mousedown', e => {
       if (e.target.closest('.excalidraw-wrap')) return;
       const el = e.target.closest('[data-seg]');
-      if (!el || e.target.closest('.run-btn')) return;
+      if (!el || e.target.closest('.run-btn') || e.target.closest('.sort-viz') || e.target.closest('.action-buttons') || e.target.closest('.master-viz-ctrl')) return;
       const idx = +el.dataset.seg;
       if (el.classList.contains('live-spacer') || el.classList.contains('live-bottom')) {
         nextActiveIdx = nearestBlock(idx, -1) ?? nearestBlock(idx, 1);
@@ -2763,7 +2888,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     liveContent.addEventListener('click', e => {
       if (e.target.closest('.excalidraw-wrap')) return;
       const el = e.target.closest('[data-seg]');
-      if (!el || e.target.closest('.run-btn')) return;
+      if (!el || e.target.closest('.run-btn') || e.target.closest('.sort-viz') || e.target.closest('.action-buttons') || e.target.closest('.master-viz-ctrl')) return;
       if (liveActiveIdx !== null) return;
       const idx = +el.dataset.seg;
       if (el.classList.contains('live-spacer') || el.classList.contains('live-bottom')) {
@@ -2775,6 +2900,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
 
     function renderLive() {
       _rendering = true;
+      liveContent.classList.remove('has-viz-inline');
       liveContent.innerHTML = '';
 
       liveSegs.forEach((seg, i) => {
@@ -2897,6 +3023,56 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
           wrap.className = 'live-block md-body';
           wrap.dataset.seg = i;
           wrap.append(...parsedDiv(seg.text).childNodes);
+
+          // Drag handle
+          const handle = document.createElement('div');
+          handle.className = 'drag-handle';
+          handle.textContent = '⠿';
+          handle.draggable = true;
+          handle.addEventListener('mousedown', e => e.stopPropagation());
+          handle.addEventListener('click', e => e.stopPropagation());
+          handle.addEventListener('dragstart', e => {
+            _dragSrcIdx = i;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', String(i));
+            requestAnimationFrame(() => wrap.classList.add('dragging'));
+          });
+          handle.addEventListener('dragend', () => {
+            wrap.classList.remove('dragging');
+            liveContent.querySelectorAll('.drag-over-top, .drag-over-bottom')
+              .forEach(el => el.classList.remove('drag-over-top', 'drag-over-bottom'));
+            _dragSrcIdx = null;
+          });
+          wrap.appendChild(handle);
+
+          // Drop target
+          wrap.addEventListener('dragover', e => {
+            if (_dragSrcIdx === null || _dragSrcIdx === i) return;
+            e.preventDefault();
+            liveContent.querySelectorAll('.drag-over-top, .drag-over-bottom')
+              .forEach(el => el.classList.remove('drag-over-top', 'drag-over-bottom'));
+            const rect = wrap.getBoundingClientRect();
+            wrap.classList.add(e.clientY < rect.top + rect.height / 2 ? 'drag-over-top' : 'drag-over-bottom');
+            e.dataTransfer.dropEffect = 'move';
+          });
+          wrap.addEventListener('dragleave', e => {
+            if (!wrap.contains(e.relatedTarget))
+              wrap.classList.remove('drag-over-top', 'drag-over-bottom');
+          });
+          wrap.addEventListener('drop', e => {
+            e.preventDefault();
+            if (_dragSrcIdx === null || _dragSrcIdx === i) return;
+            const before = wrap.classList.contains('drag-over-top');
+            wrap.classList.remove('drag-over-top', 'drag-over-bottom');
+            const seg = liveSegs[_dragSrcIdx];
+            liveSegs.splice(_dragSrcIdx, 1);
+            const tgt = i > _dragSrcIdx ? i - 1 : i;
+            liveSegs.splice(before ? tgt : tgt + 1, 0, seg);
+            liveActiveIdx = null;
+            renderLive();
+            syncFromLive();
+          });
+
           // Add edit button to excalidraw blocks
           const exWrap = wrap.querySelector('.excalidraw-wrap');
           if (exWrap) {
@@ -2936,6 +3112,149 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         } catch(e) {}
       }, 400);
     }
+
+    // ── Command palette ──────────────────────────────────────────────────────
+    const cmdPaletteEl = document.getElementById('cmdPalette');
+    const cmdInputEl   = document.getElementById('cmdInput');
+    const cmdListEl    = document.getElementById('cmdList');
+    let cmdActiveIdx   = 0;
+
+    const CMD_SECTIONS = [
+      { section: 'Insert block', items: [
+        { label: 'Heading 1',                icon: 'H1',   text: '# Heading' },
+        { label: 'Heading 2',                icon: 'H2',   text: '## Heading' },
+        { label: 'Heading 3',                icon: 'H3',   text: '### Heading' },
+        { label: 'Data block',               icon: '{}',   text: '```data\narr = []\n```' },
+        { label: 'Sort visualizer — Python', icon: '▶py',  text: '```sort:python\n\n```' },
+        { label: 'Sort visualizer — Lisp',   icon: '▶lsp', text: '```sort:lisp\n\n```' },
+        { label: 'Code — Python',            icon: 'py',   text: '```python\n\n```' },
+        { label: 'Code — JavaScript',        icon: 'js',   text: '```javascript\n\n```' },
+        { label: 'Code — TypeScript',        icon: 'ts',   text: '```typescript\n\n```' },
+        { label: 'Code — Rust',              icon: 'rs',   text: '```rust\n\n```' },
+        { label: 'Code — Lisp',              icon: 'lsp',  text: '```lisp\n\n```' },
+        { label: 'Code — Ruby',              icon: 'rb',   text: '```ruby\n\n```' },
+        { label: 'Code — C++',               icon: 'cpp',  text: '```cpp\n\n```' },
+        { label: 'Math block',               icon: '∑',    text: '$$\n\n$$' },
+        { label: 'Mermaid diagram',          icon: '◇',    text: '```mermaid\ngraph LR\n  A --> B\n```' },
+        { label: 'Horizontal rule',          icon: '─',    text: '---' },
+      ]},
+      { section: 'Actions', items: [
+        { label: 'Run all code blocks',      icon: '▶',  action: () => runAllCode(liveContent) },
+        { label: 'Visualize all sorts',      icon: '▶',  action: () => visualizeAllSorts(liveContent) },
+        { label: 'Toggle theme',             icon: '◑',  action: () => themeBtn.click() },
+        { label: 'Open docs',                icon: '?',  action: () => docsBtn.click() },
+        { label: 'Share / copy URL',         icon: '↗',  action: () => shareBtn.click() },
+        { label: 'Switch to Split view',     icon: '⊟',  action: () => modeBtn.click() },
+      ]},
+    ];
+
+    // Flatten for filtering, keep section labels
+    function buildCmdItems(query) {
+      const q = query.toLowerCase();
+      const out = [];
+      for (const s of CMD_SECTIONS) {
+        const matched = s.items.filter(it => it.label.toLowerCase().includes(q));
+        if (!matched.length) continue;
+        if (!q) out.push({ _section: s.section });
+        out.push(...matched);
+      }
+      return out;
+    }
+
+    function renderCmdList(query) {
+      cmdActiveIdx = 0;
+      cmdListEl.innerHTML = '';
+      const items = buildCmdItems(query);
+      items.forEach((it, idx) => {
+        if (it._section) {
+          const sec = document.createElement('div');
+          sec.className = 'cmd-item-section';
+          sec.textContent = it._section;
+          cmdListEl.appendChild(sec);
+          return;
+        }
+        const row = document.createElement('div');
+        row.className = 'cmd-item' + (idx === cmdActiveIdx ? ' active' : '');
+        row.innerHTML = `<span class="cmd-item-icon">${it.icon}</span><span class="cmd-item-label">${it.label}</span>`;
+        row.addEventListener('mouseover', () => setActive(idx, items));
+        row.addEventListener('mousedown', e => { e.preventDefault(); execCmd(it); });
+        cmdListEl.appendChild(row);
+      });
+      // set first non-section active
+      const first = items.findIndex(it => !it._section);
+      if (first >= 0) setActive(first, items);
+    }
+
+    function setActive(idx, items) {
+      cmdActiveIdx = idx;
+      const rows = cmdListEl.querySelectorAll('.cmd-item');
+      let rowIdx = 0;
+      items.forEach((it, i) => {
+        if (it._section) return;
+        rows[rowIdx]?.classList.toggle('active', i === idx);
+        rowIdx++;
+      });
+      cmdListEl.querySelectorAll('.cmd-item')[rowIdx - 1]?.scrollIntoView?.({ block: 'nearest' });
+    }
+
+    function execCmd(it) {
+      closePalette();
+      if (it.action) { it.action(); return; }
+      if (it.text != null) insertLiveBlock(it.text);
+    }
+
+    function insertLiveBlock(text) {
+      const at = liveActiveIdx !== null ? liveActiveIdx + 1 : liveSegs.length;
+      liveSegs.splice(at, 0, { type: 'blank' }, { type: 'block', text });
+      liveActiveIdx = at + 1;
+      liveCursorPos = text.indexOf('\n') + 1 || text.length;
+      renderLive();
+      syncFromLive();
+    }
+
+    function openPalette() {
+      cmdPaletteEl.style.display = 'flex';
+      cmdInputEl.value = '';
+      renderCmdList('');
+      requestAnimationFrame(() => cmdInputEl.focus());
+    }
+
+    function closePalette() {
+      cmdPaletteEl.style.display = 'none';
+    }
+
+    cmdInputEl.addEventListener('input', () => renderCmdList(cmdInputEl.value));
+    cmdInputEl.addEventListener('keydown', e => {
+      const items = buildCmdItems(cmdInputEl.value);
+      const actionItems = items.filter(it => !it._section);
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const nextIdx = items.findIndex((it, i) => i > cmdActiveIdx && !it._section);
+        if (nextIdx >= 0) setActive(nextIdx, items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        let prevIdx = -1;
+        for (let i = cmdActiveIdx - 1; i >= 0; i--) { if (!items[i]._section) { prevIdx = i; break; } }
+        if (prevIdx >= 0) setActive(prevIdx, items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const it = items[cmdActiveIdx];
+        if (it && !it._section) execCmd(it);
+      } else if (e.key === 'Escape') {
+        closePalette();
+      }
+    });
+    cmdPaletteEl.addEventListener('mousedown', e => { if (e.target === cmdPaletteEl) closePalette(); });
+
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        if (!liveMode) return;
+        e.preventDefault();
+        e.stopPropagation();
+        cmdPaletteEl.style.display === 'none' ? openPalette() : closePalette();
+      }
+    });
+    // ─────────────────────────────────────────────────────────────────────────
 
     modeBtn.addEventListener('click', () => {
       liveMode = !liveMode;
