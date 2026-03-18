@@ -686,18 +686,11 @@ Everything you type is compressed and encoded into the URL fragment (the part af
 html,body,#root{margin:0;height:100%;overflow:hidden;font-family:sans-serif}
 .loading{display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:14px}
 </style>
-<script type="importmap">{"imports":{
-  "react":"https://esm.sh/react@18",
-  "react-dom":"https://esm.sh/react-dom@18",
-  "react-dom/client":"https://esm.sh/react-dom@18/client",
-  "react/jsx-runtime":"https://esm.sh/react@18/jsx-runtime",
-  "@excalidraw/excalidraw":"https://esm.sh/@excalidraw/excalidraw"
-}}<\/script>
 </head><body><div id="root"><div class="loading">Loading Excalidraw\u2026</div></div>
 <script type="module">
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import { Excalidraw } from '@excalidraw/excalidraw';
+import React from 'https://esm.sh/react@18';
+import { createRoot } from 'https://esm.sh/react-dom@18/client';
+import { Excalidraw } from 'https://esm.sh/@excalidraw/excalidraw?deps=react@18,react-dom@18';
 
 let excalidrawAPI = null;
 let debounce = null;
@@ -720,9 +713,13 @@ function init(data) {
   );
 }
 window.addEventListener('message', e => {
-  if (e.data && e.data.type === 'excalidraw-init') init(e.data.scene);
-}, { once: true });
-setTimeout(() => { if (!excalidrawAPI) init(null); }, 3000);
+  if (e.data && e.data.type === 'excalidraw-init') {
+    init(e.data.scene);
+    _initDone = true;
+  }
+});
+let _initDone = false;
+setTimeout(() => { if (!_initDone) init(null); }, 3000);
 <\/script></body></html>`;
 
     const _excalidrawCache = new Map(); // json hash → wrap element
