@@ -66,6 +66,40 @@
     }
     #urlSize.warn  { color: #e3b341; }
     #urlSize.over  { color: #f85149; }
+    #wordCount {
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      color: rgba(255,255,255,0.4);
+      display: none;
+    }
+
+    /* ── Settings dropdown ── */
+    .settings-wrap { position: relative; }
+    .settings-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 0;
+      min-width: 180px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 100;
+    }
+    .settings-menu.open { display: block; }
+    .settings-menu label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .settings-menu label:hover { background: var(--border); }
 
     .btn {
       padding: 5px 13px;
@@ -367,9 +401,16 @@
 </head>
 <body>
   <header>
-    <a class="logo" href="/">litbin</a>
+    <a class="logo" href="https://landinbik.github.io/litbin/">litbin</a>
     <div class="spacer"></div>
+    <span id="wordCount"></span>
     <span id="urlSize"></span>
+    <div class="settings-wrap">
+      <button class="btn" id="settingsBtn">&#9881;</button>
+      <div class="settings-menu" id="settingsMenu">
+        <label><input type="checkbox" id="showWordCount"> Word count &amp; reading time</label>
+      </div>
+    </div>
     <button class="btn" id="modeBtn">Live</button>
     <button class="btn" id="themeBtn">Dark</button>
     <button class="btn" id="importBtn">Import</button>
@@ -749,6 +790,35 @@ Everything you type is compressed and encoded into the URL fragment (the part af
         preview.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
       attachRunButtons(preview);
       renderMermaid(preview);
+      updateWordCount();
+    }
+
+    // ── Settings ─────────────────────────────────────────────────────────────
+    const settingsBtn  = document.getElementById('settingsBtn');
+    const settingsMenu = document.getElementById('settingsMenu');
+    const showWordCount = document.getElementById('showWordCount');
+    const wordCountEl  = document.getElementById('wordCount');
+
+    settingsBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      settingsMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', () => settingsMenu.classList.remove('open'));
+    settingsMenu.addEventListener('click', e => e.stopPropagation());
+
+    showWordCount.checked = localStorage.getItem('litbin-wordcount') === '1';
+    showWordCount.addEventListener('change', () => {
+      localStorage.setItem('litbin-wordcount', showWordCount.checked ? '1' : '0');
+      updateWordCount();
+    });
+
+    function updateWordCount() {
+      if (!showWordCount.checked) { wordCountEl.style.display = 'none'; return; }
+      const text = editor.value.trim();
+      const words = text ? text.split(/\s+/).length : 0;
+      const mins = Math.max(1, Math.round(words / 230));
+      wordCountEl.textContent = words + ' words · ' + mins + ' min read';
+      wordCountEl.style.display = '';
     }
 
     // ── Size indicator ───────────────────────────────────────────────────────
