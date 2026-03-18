@@ -715,7 +715,7 @@ window.addEventListener('message', e => {
   if (e.data && e.data.type === 'excalidraw-init') init(e.data.scene);
 });
 init(null);
-</script></body></html>`;
+<` + `\/script></body></html>`;
       return URL.createObjectURL(new Blob([html], { type: 'text/html' }));
     }
 
