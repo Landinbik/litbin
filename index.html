@@ -457,7 +457,7 @@ Everything you type is compressed and encoded into the URL fragment (the part af
 
 **Size limits:** A few hundred KB of markdown fits comfortably in a URL. That's enough for any note, explanation, or code snippet you'd reasonably want to share. The status bar shows URL size as you type.
 
-**Short URLs:** For cleaner links, hit **Short URL** to get an is.gd shortlink.
+**Short URLs:** For cleaner links, hit **Short URL** to get a shortlink (valid for 1 year).
 
 ---
 
@@ -851,27 +851,29 @@ Everything you type is compressed and encoded into the URL fragment (the part af
         .catch(() => showToast('Copy failed — select the address bar manually'));
     });
 
-    // ── Short URL (JSONP to bypass CORS) ────────────────────────────────────
+    // ── Short URL (LinkShrink — CORS-friendly, 1-year TTL) ─────────────────
     const shortBtn = document.getElementById('shortBtn');
-    shortBtn.addEventListener('click', () => {
+    shortBtn.addEventListener('click', async () => {
       shortBtn.disabled = true;
       shortBtn.textContent = '…';
-      const cb = '_shortUrlCb' + Date.now();
-      const script = document.createElement('script');
-      const cleanup = () => { delete window[cb]; script.remove(); shortBtn.disabled = false; shortBtn.textContent = 'Short URL'; };
-      window[cb] = data => {
-        cleanup();
-        if (data.shorturl) {
-          navigator.clipboard.writeText(data.shorturl)
-            .then(() => showToast('Short URL copied!'))
-            .catch(() => showToast('Copy failed'));
+      try {
+        const res = await fetch('https://linkshrink.dev/api/v1/shorten', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: location.href, ttl_seconds: 31536000 })
+        });
+        const json = await res.json();
+        if (json.status === 'success' && json.data?.shortUrl) {
+          await navigator.clipboard.writeText(json.data.shortUrl);
+          showToast('Short URL copied!');
         } else {
-          showToast('Shortening failed: ' + (data.errormessage || 'unknown error'));
+          showToast('Shortening failed: ' + (json.message || 'unknown error'));
         }
-      };
-      script.src = 'https://is.gd/create.php?format=json&callback=' + cb + '&url=' + encodeURIComponent(location.href);
-      script.onerror = () => { cleanup(); showToast('Shortening failed — network error'); };
-      document.head.appendChild(script);
+      } catch (err) {
+        showToast('Shortening failed — network error');
+      }
+      shortBtn.disabled = false;
+      shortBtn.textContent = 'Short URL';
     });
 
     // ── Import ───────────────────────────────────────────────────────────────
