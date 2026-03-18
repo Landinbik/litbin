@@ -4,32 +4,29 @@ Ideas for future improvements. None are committed to.
 
 ---
 
-## URL compression
-
-### ~~Better compression algorithm~~ ✓ done
-Implemented: `CompressionStream('deflate-raw')` replaces LZ-string. Old URLs still decode via LZ-string fallback.
-
-### ~~Denser encoding (CJK alphabet)~~ ✗ reverted
-CJK chars get percent-encoded on copy (%E4%B8%80 → 9 chars each), making URLs *longer* than base64. Switched to deflate-raw + base64url, which is the current codec.
-
----
-
 ## Done
 
+- ~~**Deflate compression**~~ — `CompressionStream('deflate-raw')` + base64url replaces LZ-string (legacy fallback preserved)
+- ~~**CJK encoding**~~ ✗ reverted — percent-encoding makes URLs longer than base64url
 - ~~**KaTeX math**~~ — `$inline$` and `$$block$$` via marked extension + KaTeX CDN
 - ~~**File import**~~ — Import button loads .md/.txt into editor
-- ~~**Code execution**~~ — 28+ languages via Wandbox API with run buttons
+- ~~**File export**~~ — Export button downloads editor content as .md
+- ~~**Code execution**~~ — 32 languages via Wandbox API with run buttons
 - ~~**Live mode**~~ — Obsidian-style block editing with fence-aware splitting
+- ~~**Mermaid diagrams**~~ — `mermaid` fenced blocks render as SVG, theme-aware
+- ~~**Tab capture**~~ — Tab inserts 2 spaces in both editor views
+- ~~**List editing**~~ — Obsidian-style indent/dedent/continue/exit for lists
+- ~~**Short URL**~~ — LinkShrink API, 1-year TTL, instant redirect
+- ~~**Line numbers**~~ — VS Code-style gutter with word-wrap support
+- ~~**Word count / reading time**~~ — Settings toggle, 180 wpm estimate
+- ~~**Excalidraw whiteboards**~~ — Interactive drawing in ` ```excalidraw ``` ` blocks, direct rendering (no iframe), save-back to markdown source, fold/unfold large JSON blocks, edit button in live mode
 
 ---
 
 ## Remaining ideas
 
-### ~~Mermaid diagrams~~ ✓ done
-Implemented via mermaid@11 CDN. Fenced ` ```mermaid ``` ` blocks render as SVG diagrams. Theme-aware (light/dark).
-
-### Word count / reading time
-Cheap to add to the header bar alongside the URL size indicator.
+### Password-protected pastes
+Use Web Crypto API (PBKDF2 → AES-GCM) to encrypt compressed bytes with a user-supplied password. Salt + IV + ciphertext go in the URL hash with a prefix to distinguish from plain pastes. On load, detect prefix → prompt for password → decrypt. ~40-50 lines of JS, no extra libraries.
 
 ### Table of contents
 Auto-generate from headings. Collapsible sidebar or injected at top of preview.
@@ -40,8 +37,11 @@ Serialize the rendered preview into a self-contained HTML file and trigger a bro
 ### Find / replace
 Ctrl+H in the textarea. Simple floating panel.
 
-### Line numbers in editor
-Overlay or a paired element synced to textarea scroll.
+### Keyboard shortcuts cheat sheet
+Modal or tooltip showing all keybindings (Tab, Shift+Tab, Enter in lists, Escape in live mode, etc.).
 
-### Password-protected pastes
-Encrypt with a user-supplied passphrase before compressing. Key shared out-of-band or appended after a second `#` in the URL.
+### Edit history (localStorage)
+Store last N URL hashes in localStorage. Navigate backward through edits. Lightweight undo across page reloads.
+
+### Mobile formatting toolbar
+Floating buttons for bold, italic, code, link — mobile keyboards lack the special keys needed for markdown shortcuts.

@@ -437,19 +437,24 @@
 
     /* ── Sort visualizer ── */
     .sort-viz { border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; background: var(--surface); padding: 12px 16px; }
-    .sort-viz-controls { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
+    .sort-viz-controls { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
     .sort-viz-controls button { padding: 3px 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 4px; font-size: 12px; cursor: pointer; font-family: inherit; }
     .sort-viz-controls button:hover { background: var(--surface); }
     .sort-viz-controls button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
     .sort-viz-controls input[type=range] { width: 60px; }
     .sort-viz-label { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 4px; min-height: 16px; }
-    .sort-viz-canvas { display: flex; flex-direction: column; gap: 6px; }
-    .sort-viz-row { display: flex; align-items: flex-end; gap: 1px; height: 120px; }
-    .sort-viz-bar { flex: 1; min-width: 2px; background: var(--accent); border-radius: 2px 2px 0 0; transition: height 0.15s ease, background 0.15s ease; position: relative; }
-    .sort-viz-bar.active { background: #f85149; }
+    .sort-viz-row { display: flex; align-items: flex-end; gap: 1px; height: 140px; padding-bottom: 18px; position: relative; }
+    .sort-viz-bar { flex: 1; min-width: 2px; background: var(--accent); border-radius: 2px 2px 0 0; transition: height 0.12s ease-out, background-color 0.1s ease; position: relative; }
+    .sort-viz-bar.compare { background: #e3b341; }
+    .sort-viz-bar.swap { background: #f85149; }
     .sort-viz-bar.sorted { background: #3fb950; }
     .sort-viz-bar-label { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--text-muted); white-space: nowrap; }
     .sort-viz-frame { font-variant-numeric: tabular-nums; font-size: 11px; color: var(--text-muted); }
+    .sort-viz-legend { display: flex; gap: 12px; font-size: 10px; color: var(--text-muted); margin-left: auto; }
+    .sort-viz-legend span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 3px; vertical-align: middle; }
+    .sort-viz-legend .leg-compare::before { background: #e3b341; }
+    .sort-viz-legend .leg-swap::before { background: #f85149; }
+    .sort-viz-legend .leg-sorted::before { background: #3fb950; }
 
     /* ── Mobile overrides ── */
     @media (max-width: 700px) {
@@ -566,50 +571,39 @@ print([fib(i) for i in range(10)])
 **Sort visualizer** — use \\\`sort:lang\\\` to animate algorithms. Print the array each step:
 
 \`\`\`sort:python
-# Insertion sort — prints [active] elements
+# Insertion sort — sort_print is built in, no boilerplate needed
 arr = [8, 3, 12, 1, 9, 5, 15, 2, 7, 10, 4, 6]
-print(*arr)
+sort_print(arr)
 for i in range(1, len(arr)):
     key = arr[i]
     j = i - 1
     while j >= 0 and arr[j] > key:
-        arr[j + 1] = arr[j]
+        arr[j+1] = arr[j]
         j -= 1
-    arr[j + 1] = key
-    out = []
-    for k, v in enumerate(arr):
-        out.append(f"[{v}]" if k == j + 1 else str(v))
-    print(*out)
+    arr[j+1] = key
+    sort_print(arr, swap=j+1, compare=range(j+2, i+1))
+sort_print(arr)
 \`\`\`
 
 \`\`\`sort:python
-# Merge sort — labels each phase
-def merge_sort(arr):
-    if len(arr) <= 1:
-        return arr
-    mid = len(arr) // 2
-    left = merge_sort(arr[:mid])
-    right = merge_sort(arr[mid:])
-    return merge(left, right)
-
-def merge(left, right):
-    result = []
-    i = j = 0
-    while i < len(left) and j < len(right):
-        if left[i] <= right[j]:
-            result.append(left[i]); i += 1
+# Merge sort — always shows full array, [placed] in red
+disp = [8, 3, 12, 1, 9, 5, 15, 2]
+n = len(disp)
+def ms(lo, hi):
+    if hi-lo<=1: return
+    mid=(lo+hi)//2
+    ms(lo,mid); ms(mid,hi)
+    L,R=disp[lo:mid],disp[mid:hi]
+    i=j=0
+    for k in range(lo,hi):
+        if i<len(L) and (j>=len(R) or L[i]<=R[j]):
+            disp[k]=L[i]; i+=1
         else:
-            result.append(right[j]); j += 1
-    result.extend(left[i:])
-    result.extend(right[j:])
-    print(f"# merge {left} + {right}")
-    print(*result)
-    return result
-
-arr = [8, 3, 12, 1, 9, 5, 15, 2]
-print("# unsorted")
-print(*arr)
-merge_sort(arr)
+            disp[k]=R[j]; j+=1
+        sort_print(disp, swap=k)
+sort_print(disp)
+ms(0,n)
+sort_print(disp)
 \`\`\`
 
 ---
@@ -964,6 +958,38 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       sql:           { compiler: 'sqlite-3.46.1',         options: '' },
     };
 
+    // sort_print helpers injected before user code in sort:LANG blocks
+    // Usage: sort_print(arr)  /  sort_print(arr, compare=i, swap=j)
+    // compare/swap accept a single index or list of indices
+    const SORT_PREAMBLES = {
+      python: `def sort_print(a,compare=(),swap=()):
+  _c={compare}if isinstance(compare,int)else set(compare)
+  _s={swap}if isinstance(swap,int)else set(swap)
+  print(*[f"[{v}]"if i in _s else f"({v})"if i in _c else str(v)for i,v in enumerate(a)])
+`,
+      javascript: `function sort_print(a,{compare=[],swap=[]}={}){const c=new Set([].concat(compare)),s=new Set([].concat(swap));console.log(a.map((v,i)=>s.has(i)?'['+v+']':c.has(i)?'('+v+')':String(v)).join(' '));}
+`,
+      typescript: `function sort_print(a:number[],opts:{compare?:number|number[],swap?:number|number[]}={}){const c=new Set(([] as number[]).concat(opts.compare??[])),s=new Set(([] as number[]).concat(opts.swap??[]));console.log(a.map((v,i)=>s.has(i)?'['+v+']':c.has(i)?'('+v+')':String(v)).join(' '));}
+`,
+      ruby: `def sort_print(a,compare:[],swap:[]);c,s=[compare].flatten.to_set,[swap].flatten.to_set;puts a.each_with_index.map{|v,i|s.include?(i)?"[#{v}]":c.include?(i)?"(#{v})":v.to_s}.join(' ');end
+`,
+      cpp: `#include<vector>
+#include<set>
+#include<iostream>
+template<class T>void sort_print(const std::vector<T>&a,std::initializer_list<int>cmp={},std::initializer_list<int>swp={}){std::set<int>c(cmp),s(swp);for(int i=0;i<(int)a.size();i++){if(i)std::cout<<' ';if(s.count(i))std::cout<<'['<<a[i]<<']';else if(c.count(i))std::cout<<'('<<a[i]<<')';else std::cout<<a[i];}std::cout<<'\n';}
+`,
+      rust: `use std::collections::HashSet;
+fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:HashSet<_>=compare.iter().cloned().collect();let s:HashSet<_>=swap.iter().cloned().collect();let out:Vec<String>=a.iter().enumerate().map(|(i,v)|{if s.contains(&i){format!("[{}]",v)}else if c.contains(&i){format!("({})",v)}else{format!("{}",v)}}).collect();println!("{}",out.join(" "));}
+`,
+    };
+    // Aliases
+    ['python3','py'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.python);
+    ['js'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.javascript);
+    ['ts'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.typescript);
+    ['rb'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.ruby);
+    ['c++','cxx'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.cpp);
+    ['rs'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.rust);
+
     const outputCache = new Map(); // key: lang+'\x00'+code → {className, innerHTML}
 
     async function executeCode(lang, code, outEl, btn) {
@@ -1075,10 +1101,10 @@ Everything you type is compressed and encoded into the URL fragment (the part af
     }
 
     // ── Sort visualizer ──────────────────────────────────────────────────────
-    // Output format: one line per frame, space-separated numbers
-    //   [N] = highlighted element, # comment = label above frame
-    //   Each number line = one frame (one array snapshot)
-    //   # label applies to the next frame
+    // Output: one line per frame, space-separated numbers
+    //   (N) = comparing (yellow), [N] = swapping/writing (red)
+    //   # comment = label shown above frame
+    //   Plain numbers = default color; last frame = all green
     function parseSortOutput(stdout) {
       const frames = [];
       const raw = stdout.trim();
@@ -1088,32 +1114,31 @@ Everything you type is compressed and encoded into the URL fragment (the part af
 
       function parseRow(line) {
         const parts = line.split(/\s+/);
-        const values = [], active = new Set();
+        const values = [], compare = new Set(), swap = new Set();
         for (let j = 0; j < parts.length; j++) {
           const p = parts[j];
-          const bm = p.match(/^\[(-?\d+(?:\.\d+)?)\]$/);
-          if (bm) { values.push(Number(bm[1])); active.add(j); }
-          else { const n = Number(p); if (!isNaN(n)) values.push(n); }
+          // [N] = swap/write (red)
+          const sm = p.match(/^\[(-?\d+(?:\.\d+)?)\]$/);
+          if (sm) { values.push(Number(sm[1])); swap.add(j); continue; }
+          // (N) = compare (yellow)
+          const cm = p.match(/^\((-?\d+(?:\.\d+)?)\)$/);
+          if (cm) { values.push(Number(cm[1])); compare.add(j); continue; }
+          const n = Number(p);
+          if (!isNaN(n)) values.push(n);
         }
-        return values.length ? { values, active } : null;
+        return values.length ? { values, compare, swap } : null;
       }
 
       for (const line of raw.split('\n')) {
         const trimmed = line.trim();
         if (trimmed === '' || trimmed === '---') continue;
-
-        if (trimmed.startsWith('#')) {
-          currentLabel = trimmed.slice(1).trim();
-          continue;
-        }
-
+        if (trimmed.startsWith('#')) { currentLabel = trimmed.slice(1).trim(); continue; }
         const row = parseRow(trimmed);
         if (row) {
           frames.push({ label: currentLabel, rows: [row] });
           currentLabel = '';
         }
       }
-
       return frames;
     }
 
@@ -1121,10 +1146,11 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       const viz = document.createElement('div');
       viz.className = 'sort-viz';
 
-      // Find global max for consistent bar scaling
-      let maxVal = 1;
+      // Find global max for consistent bar scaling across all frames
+      let maxVal = 1, barCount = 0;
       for (const frame of frames) {
         for (const row of frame.rows) {
+          barCount = Math.max(barCount, row.values.length);
           for (const v of row.values) maxVal = Math.max(maxVal, Math.abs(v));
         }
       }
@@ -1154,53 +1180,67 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       const frameInfo = document.createElement('span');
       frameInfo.className = 'sort-viz-frame';
 
-      controls.append(prevBtn, playBtn, nextBtn, speedLabel, speedSlider, frameInfo);
+      const legend = document.createElement('div');
+      legend.className = 'sort-viz-legend';
+      legend.innerHTML = '<span class="leg-compare">compare</span><span class="leg-swap">swap</span><span class="leg-sorted">sorted</span>';
 
-      // Canvas area
+      controls.append(prevBtn, playBtn, nextBtn, speedLabel, speedSlider, frameInfo, legend);
+
+      // Canvas: create bars once, update heights/classes per frame
       const labelEl = document.createElement('div');
       labelEl.className = 'sort-viz-label';
 
-      const canvas = document.createElement('div');
-      canvas.className = 'sort-viz-canvas';
+      const rowEl = document.createElement('div');
+      rowEl.className = 'sort-viz-row';
 
-      viz.append(controls, labelEl, canvas);
+      // Pre-create bar elements
+      const bars = [];
+      const labels = [];
+      for (let i = 0; i < barCount; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'sort-viz-bar';
+        const lbl = document.createElement('span');
+        lbl.className = 'sort-viz-bar-label';
+        bar.appendChild(lbl);
+        rowEl.appendChild(bar);
+        bars.push(bar);
+        labels.push(lbl);
+      }
+
+      viz.append(controls, labelEl, rowEl);
       wrapEl.appendChild(viz);
 
       // State
       let currentFrame = 0;
       let playing = false;
       let interval = null;
+      const isLastFrame = () => currentFrame === frames.length - 1;
 
       function renderFrame(idx) {
         currentFrame = Math.max(0, Math.min(idx, frames.length - 1));
         const frame = frames[currentFrame];
+        const row = frame.rows[0] || { values: [], compare: new Set(), swap: new Set() };
         frameInfo.textContent = `${currentFrame + 1} / ${frames.length}`;
         labelEl.textContent = frame.label || '';
 
-        canvas.innerHTML = '';
-        for (const row of frame.rows) {
-          const rowEl = document.createElement('div');
-          rowEl.className = 'sort-viz-row';
+        const lastFrame = isLastFrame();
+        const hasAnnotations = row.compare.size > 0 || row.swap.size > 0;
 
-          for (let i = 0; i < row.values.length; i++) {
+        for (let i = 0; i < barCount; i++) {
+          const bar = bars[i];
+          if (i < row.values.length) {
             const v = row.values[i];
-            const bar = document.createElement('div');
-            bar.className = 'sort-viz-bar';
-            if (row.active.has(i)) bar.classList.add('active');
-            // On last frame, mark all as sorted
-            if (currentFrame === frames.length - 1 && !row.active.size) bar.classList.add('sorted');
+            bar.style.display = '';
             bar.style.height = (Math.abs(v) / maxVal * 100) + '%';
-
-            // Show value label if array is small enough
-            if (row.values.length <= 30) {
-              const lbl = document.createElement('span');
-              lbl.className = 'sort-viz-bar-label';
-              lbl.textContent = v;
-              bar.appendChild(lbl);
-            }
-            rowEl.appendChild(bar);
+            bar.className = 'sort-viz-bar';
+            if (row.compare.has(i)) bar.classList.add('compare');
+            else if (row.swap.has(i)) bar.classList.add('swap');
+            else if (lastFrame && !hasAnnotations) bar.classList.add('sorted');
+            labels[i].textContent = barCount <= 30 ? v : '';
+            labels[i].style.display = barCount <= 30 ? '' : 'none';
+          } else {
+            bar.style.display = 'none';
           }
-          canvas.appendChild(rowEl);
         }
       }
 
@@ -1266,7 +1306,11 @@ Everything you type is compressed and encoded into the URL fragment (the part af
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             compiler: spec.compiler,
-            code: spec.transform ? spec.transform(code) : code,
+            code: (() => {
+              const preamble = SORT_PREAMBLES[lang.toLowerCase()] || '';
+              const userCode = spec.transform ? spec.transform(code) : code;
+              return preamble ? preamble + '\n' + userCode : userCode;
+            })(),
             options: spec.options,
             ...(spec.rawOptions ? { 'compiler-option-raw': spec.rawOptions } : {}),
           }),
