@@ -306,6 +306,9 @@
     .math-block   { overflow-x: auto; margin: 1em 0; text-align: center; }
     .mermaid-block { overflow-x: auto; margin: 1em 0; text-align: center; }
     .mermaid-block svg { max-width: 100%; height: auto; }
+    .excalidraw-wrap { position: relative; margin: 1em 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    .excalidraw-wrap iframe { width: 100%; height: 400px; border: none; display: block; }
+    .excalidraw-wrap .excalidraw-badge { position: absolute; top: 6px; left: 8px; font-size: 11px; color: var(--text-muted); opacity: .6; pointer-events: none; z-index: 1; }
     .md-body hr   { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
 
     .md-body input[type="checkbox"] { margin-right: 6px; }
@@ -316,8 +319,8 @@
       bottom: 24px;
       left: 50%;
       transform: translateX(-50%) translateY(60px);
-      background: #1f2328;
-      color: #f0f6fc;
+      background: var(--header-bg);
+      color: var(--header-text);
       padding: 9px 18px;
       border-radius: 8px;
       font-size: 13px;
@@ -513,7 +516,7 @@ Write about a leetcode problem. Sketch an algorithm. Jot down an idea. Draft a s
 
 $$\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$$
 
-**Diagrams** — mermaid blocks render automatically:
+**Diagrams** — mermaid blocks render automatically, and \\\`excalidraw\\\` blocks open an interactive whiteboard:
 
 \`\`\`mermaid
 graph LR
@@ -668,6 +671,108 @@ Everything you type is compressed and encoded into the URL fragment (the part af
         pre.replaceWith(div);
       }
     }
+
+    // ── Excalidraw diagrams ─────────────────────────────────────────────────
+    const EXCALIDRAW_SRCDOC = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<style>
+html,body,#root{margin:0;height:100%;overflow:hidden;font-family:sans-serif}
+.loading{display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:14px}
+</style>
+<script type="importmap">{"imports":{
+  "react":"https://esm.sh/react@18",
+  "react-dom":"https://esm.sh/react-dom@18",
+  "react-dom/client":"https://esm.sh/react-dom@18/client",
+  "react/jsx-runtime":"https://esm.sh/react@18/jsx-runtime",
+  "@excalidraw/excalidraw":"https://esm.sh/@excalidraw/excalidraw"
+}}<\/script>
+</head><body><div id="root"><div class="loading">Loading Excalidraw\u2026</div></div>
+<script type="module">
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { Excalidraw } from '@excalidraw/excalidraw';
+
+let excalidrawAPI = null;
+let debounce = null;
+function init(data) {
+  createRoot(document.getElementById('root')).render(
+    React.createElement(Excalidraw, {
+      initialData: data || { elements: [], appState: { viewBackgroundColor: '#ffffff' } },
+      excalidrawAPI: api => { excalidrawAPI = api; },
+      onChange: () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => {
+          if (!excalidrawAPI) return;
+          const els = excalidrawAPI.getSceneElements();
+          const state = excalidrawAPI.getAppState();
+          parent.postMessage({ type: 'excalidraw-update', elements: JSON.parse(JSON.stringify(els)),
+            appState: { viewBackgroundColor: state.viewBackgroundColor } }, '*');
+        }, 500);
+      }
+    })
+  );
+}
+window.addEventListener('message', e => {
+  if (e.data && e.data.type === 'excalidraw-init') init(e.data.scene);
+}, { once: true });
+setTimeout(() => { if (!excalidrawAPI) init(null); }, 3000);
+<\/script></body></html>`;
+
+    const _excalidrawCache = new Map(); // json hash → wrap element
+    function renderExcalidraw(container) {
+      const nodes = container.querySelectorAll('pre > code.language-excalidraw');
+      for (const codeEl of nodes) {
+        const src = codeEl.textContent.trim();
+        let scene = null;
+        try { scene = JSON.parse(src); } catch(e) {}
+
+        // Reuse existing iframe if scene JSON hasn't changed
+        const cached = _excalidrawCache.get(src);
+        if (cached) {
+          codeEl.parentElement.replaceWith(cached);
+          continue;
+        }
+
+        const wrap = document.createElement('div');
+        wrap.className = 'excalidraw-wrap';
+
+        const badge = document.createElement('span');
+        badge.className = 'excalidraw-badge';
+        badge.textContent = 'Excalidraw';
+        wrap.appendChild(badge);
+
+        const iframe = document.createElement('iframe');
+        iframe.srcdoc = EXCALIDRAW_SRCDOC;
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+        wrap.appendChild(iframe);
+
+        iframe.addEventListener('load', () => {
+          if (scene) {
+            iframe.contentWindow.postMessage({ type: 'excalidraw-init', scene }, '*');
+          }
+        });
+
+        _excalidrawCache.set(src, wrap);
+        codeEl.parentElement.replaceWith(wrap);
+      }
+    }
+
+    // Listen for scene updates from Excalidraw iframes
+    window.addEventListener('message', e => {
+      if (!e.data || e.data.type !== 'excalidraw-update') return;
+      // Find the iframe that sent the message and update the editor content
+      const iframes = document.querySelectorAll('.excalidraw-wrap iframe');
+      for (const iframe of iframes) {
+        if (iframe.contentWindow === e.source) {
+          const scene = { type: 'excalidraw', version: 2,
+            elements: e.data.elements, appState: e.data.appState };
+          // Store updated scene JSON as data attribute for potential sync
+          iframe.closest('.excalidraw-wrap').dataset.scene = JSON.stringify(scene, null, 2);
+          break;
+        }
+      }
+    });
 
     // ── Code execution (Wandbox API) ─────────────────────────────────────────
     const EXEC_LANGS = {
@@ -867,6 +972,7 @@ Everything you type is compressed and encoded into the URL fragment (the part af
         preview.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
       attachRunButtons(preview);
       renderMermaid(preview);
+      renderExcalidraw(preview);
       updateWordCount();
       updateLineNums();
     }
@@ -979,11 +1085,11 @@ Everything you type is compressed and encoded into the URL fragment (the part af
     editor.addEventListener('keydown', e => { handleListKeys(editor, e); });
 
     // ── Live update ──────────────────────────────────────────────────────────
-    let debounce;
+    let urlDebounce;
     editor.addEventListener('input', () => {
       render();                               // immediate — never skip this
-      clearTimeout(debounce);
-      debounce = setTimeout(async () => {    // debounce only the URL write
+      clearTimeout(urlDebounce);
+      urlDebounce = setTimeout(async () => {  // debounce only the URL write
         try {
           const encoded = await encode(editor.value);
           history.replaceState(null, '', '#' + encoded);
@@ -1143,6 +1249,7 @@ Everything you type is compressed and encoded into the URL fragment (the part af
         d.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
       attachRunButtons(d);
       renderMermaid(d);
+      renderExcalidraw(d);
       return d;
     }
 
@@ -1153,21 +1260,39 @@ Everything you type is compressed and encoded into the URL fragment (the part af
     }
 
     let _rendering = false;
+
+    // Event delegation for spacers, blocks, and bottom pad — avoids per-element listeners
+    liveContent.addEventListener('mousedown', e => {
+      const el = e.target.closest('[data-seg]');
+      if (!el || e.target.closest('.run-btn')) return;
+      const idx = +el.dataset.seg;
+      if (el.classList.contains('live-spacer') || el.classList.contains('live-bottom')) {
+        nextActiveIdx = nearestBlock(idx, -1) ?? nearestBlock(idx, 1);
+      } else if (el.classList.contains('live-block')) {
+        nextActiveIdx = idx;
+      }
+    });
+    liveContent.addEventListener('click', e => {
+      const el = e.target.closest('[data-seg]');
+      if (!el || e.target.closest('.run-btn')) return;
+      if (liveActiveIdx !== null) return;
+      const idx = +el.dataset.seg;
+      if (el.classList.contains('live-spacer') || el.classList.contains('live-bottom')) {
+        activate(nearestBlock(idx, -1) ?? nearestBlock(idx, 1));
+      } else if (el.classList.contains('live-block')) {
+        activate(idx);
+      }
+    });
+
     function renderLive() {
       _rendering = true;
       liveContent.innerHTML = '';
-      _rendering = false;
 
       liveSegs.forEach((seg, i) => {
         if (seg.type === 'blank') {
           const sp = document.createElement('div');
           sp.className = 'live-spacer';
-          sp.addEventListener('mousedown', () => {
-            nextActiveIdx = nearestBlock(i, -1) ?? nearestBlock(i, 1);
-          });
-          sp.addEventListener('click', () => {
-            if (liveActiveIdx === null) activate(nearestBlock(i, -1) ?? nearestBlock(i, 1));
-          });
+          sp.dataset.seg = i;
           liveContent.appendChild(sp);
           return;
         }
@@ -1281,26 +1406,26 @@ Everything you type is compressed and encoded into the URL fragment (the part af
         } else {
           const wrap = document.createElement('div');
           wrap.className = 'live-block md-body';
+          wrap.dataset.seg = i;
           wrap.append(...parsedDiv(seg.text).childNodes);
-          wrap.addEventListener('mousedown', e => { if (!e.target.closest('.run-btn')) nextActiveIdx = i; });
-          wrap.addEventListener('click', e => { if (!e.target.closest('.run-btn') && liveActiveIdx === null) activate(i); });
           liveContent.appendChild(wrap);
         }
       });
 
       // Bottom padding area — activates last block
-      const last = nearestBlock(liveSegs.length, -1);
       const bottom = document.createElement('div');
       bottom.className = 'live-bottom';
-      bottom.addEventListener('mousedown', () => { nextActiveIdx = last; });
-      bottom.addEventListener('click', () => { if (liveActiveIdx === null) activate(last); });
+      bottom.dataset.seg = liveSegs.length;
       liveContent.appendChild(bottom);
+
+      _rendering = false;
     }
 
+    let liveDebounce;
     function syncFromLive() {
       editor.value = joinSegs();
-      clearTimeout(debounce);
-      debounce = setTimeout(async () => {
+      clearTimeout(liveDebounce);
+      liveDebounce = setTimeout(async () => {
         try {
           const encoded = await encode(editor.value);
           history.replaceState(null, '', '#' + encoded);
