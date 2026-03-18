@@ -373,6 +373,7 @@
     <button class="btn" id="modeBtn">Live</button>
     <button class="btn" id="themeBtn">Dark</button>
     <button class="btn" id="importBtn">Import</button>
+    <button class="btn" id="exportBtn">Export</button>
     <input type="file" id="importFile" accept=".md,.txt,text/markdown,text/plain" style="display:none">
     <button class="btn primary" id="shareBtn">Copy URL</button>
     <button class="btn" id="shortBtn">Short URL</button>
@@ -891,6 +892,19 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       };
       reader.readAsText(file);
       importFile.value = '';
+    });
+
+    // ── Export ───────────────────────────────────────────────────────────────
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const text = editor.value;
+      if (!text) { showToast('Nothing to export'); return; }
+      const blob = new Blob([text], { type: 'text/markdown' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'litbin.md';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('Exported litbin.md');
     });
 
     // ── Toast ────────────────────────────────────────────────────────────────
