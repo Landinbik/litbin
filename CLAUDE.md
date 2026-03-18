@@ -32,7 +32,7 @@ No Node.js, no npm, no build. Open `index.html` directly in a browser or serve w
 
 ## Architecture
 
-Everything lives in `index.html` (~2,000 lines):
+Everything lives in `index.html` (~2,300 lines):
 
 1. **CSS** — custom properties for light/dark theming, responsive split-pane layout, sort visualizer, docs modal
 2. **HTML** — header bar (buttons, settings, URL size), docs modal overlay, mobile tab bar, split `main` with editor pane + divider + preview pane, live mode pane
@@ -117,9 +117,11 @@ Each language is declared in the `EXEC_LANGS` map:
 
 `sort:LANG` fence tag → **▶ Visualize** button. Output parsed by `parseSortOutput()` into frames; animated by `createSortVisualizer()`.
 
-- `(N)` in output = compare (yellow bar), `[N]` = swap/placement (red bar), plain = default, last frame with no annotations = all green
+- `(N)` in output = compare (yellow bar), `[N]` = swap/placement (red bar), plain = default
+- Final frame with no annotations triggers left-to-right green sweep (~500ms total, staggered per bar)
 - `SORT_PREAMBLES` map injects a `sort_print(arr, compare=, swap=)` helper before user code for: Python, JS, TS, Ruby, C++, Rust, Lisp
 - hljs highlight loop skips `language-mermaid` and `language-excalidraw` to avoid unknown-language warnings
+- Homepage has examples: insertion sort (Python), merge sort (Python), quicksort with 1/3 pivot (Lisp, Rust)
 
 ### Syntax highlighting
 
@@ -145,3 +147,7 @@ python3 -m http.server 8080
 # or
 npx serve -p 8080 .
 ```
+
+## Deployment
+
+GitHub Pages at https://landinbik.github.io/litbin/ — currently serving from `feature/sort-visualizer` branch (not yet merged to `main`). Switch branch via `gh api repos/Landinbik/litbin/pages -X PUT -f build_type=legacy -f source[branch]=BRANCH -f source[path]=/`.

@@ -20,7 +20,7 @@ Ideas for future improvements. None are committed to.
 - ~~**Line numbers**~~ — VS Code-style gutter with word-wrap support
 - ~~**Word count / reading time**~~ — Settings toggle, 180 wpm estimate
 - ~~**Excalidraw whiteboards**~~ — Interactive drawing in ` ```excalidraw ``` ` blocks, direct rendering (no iframe), save-back to markdown source, fold by default, edit button in live mode
-- ~~**Sort visualizer**~~ — `sort:LANG` fenced blocks animate sorting algorithms; `sort_print(arr, compare=, swap=)` injected automatically for Python, JS, TS, Ruby, C++, Rust, Lisp
+- ~~**Sort visualizer**~~ — `sort:LANG` fenced blocks animate sorting algorithms; `sort_print(arr, compare=, swap=)` injected automatically for Python, JS, TS, Ruby, C++, Rust, Lisp; left-to-right green sweep on completion
 - ~~**Docs modal**~~ — `?` button in header opens full feature reference (languages, sort_print implementations, limits, etc.)
 
 ---
