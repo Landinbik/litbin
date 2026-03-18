@@ -6,38 +6,42 @@ Ideas for future improvements. None are committed to.
 
 ## URL compression
 
-The current stack uses LZ-string `compressToEncodedURIComponent` (base64url, 6 bits/char).
-
 ### ~~Better compression algorithm~~ ✓ done
-~~Switch to the native `CompressionStream` API (deflate-raw).~~ Implemented: deflate-raw via `CompressionStream` replaces LZ-string. Old URLs still decode via LZ-string fallback.
+Implemented: `CompressionStream('deflate-raw')` replaces LZ-string. Old URLs still decode via LZ-string fallback.
 
-### ~~Denser encoding~~ ✓ done
-~~A hand-picked ~2048-character Unicode alphabet.~~ Implemented: 2048-char CJK alphabet (U+4E00–U+55FF), 11 bits/char vs base64's 6 — ~1.8× denser, combined with better deflate compression.
+### ~~Denser encoding (CJK alphabet)~~ ✗ reverted
+CJK chars get percent-encoded on copy (%E4%B8%80 → 9 chars each), making URLs *longer* than base64. Switched to deflate-raw + base64url, which is the current codec.
 
 ---
 
-## Features
+## Done
+
+- ~~**KaTeX math**~~ — `$inline$` and `$$block$$` via marked extension + KaTeX CDN
+- ~~**File import**~~ — Import button loads .md/.txt into editor
+- ~~**Code execution**~~ — 28+ languages via Wandbox API with run buttons
+- ~~**Live mode**~~ — Obsidian-style block editing with fence-aware splitting
+
+---
+
+## Remaining ideas
 
 ### Mermaid diagrams
-Render fenced ` ```mermaid ``` ` blocks as flowcharts, sequence diagrams, etc. One CDN script. Very popular in markdown tools and a natural fit.
+Render fenced ` ```mermaid ``` ` blocks as flowcharts, sequence diagrams, etc. One CDN script. Natural fit for a literate programming tool.
 
-### ~~KaTeX math~~ ✓ done
-~~Render `$inline$` and `$$block$$` LaTeX via KaTeX (CDN).~~ Implemented via marked extension. Inline: `$...$` (no leading/trailing spaces). Block: `$$...$$`.
+### Word count / reading time
+Cheap to add to the header bar alongside the URL size indicator.
 
 ### Table of contents
-Auto-generate from headings. Could live as a collapsible sidebar or injected at the top of the preview.
+Auto-generate from headings. Collapsible sidebar or injected at top of preview.
 
 ### Export as standalone HTML
 Serialize the rendered preview into a self-contained HTML file and trigger a browser download. Zero backend.
 
 ### Find / replace
-Ctrl+H in the textarea. Could be a simple floating panel.
-
-### Word count / reading time
-Cheap to add to the header bar alongside the URL size indicator.
+Ctrl+H in the textarea. Simple floating panel.
 
 ### Line numbers in editor
 Overlay or a paired element synced to textarea scroll.
 
 ### Password-protected pastes
-Encrypt the content with a user-supplied passphrase before LZ-compressing. Key lives only in the URL (after a second `#`) or is shared out-of-band.
+Encrypt with a user-supplied passphrase before compressing. Key shared out-of-band or appended after a second `#` in the URL.
