@@ -553,6 +553,7 @@
     body.viewer #divider,
     body.viewer .pane-label { display: none !important; }
     body.viewer #previewPane { flex: 1 !important; }
+    body.viewer #preview { max-width: 860px; margin: 0 auto; padding: 32px 40px 60px; }
 
     /* ── Slides-only mode ── */
     body.slides-only header,
@@ -2178,7 +2179,12 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       // ───────────────────────────────────────────────────────────────────────
 
       const firstCode = container.querySelector('.code-block-wrap');
-      if (firstCode) firstCode.parentElement.insertBefore(btnContainer, firstCode);
+      if (firstCode) {
+        let insertTarget = firstCode;
+        while (insertTarget.parentElement && insertTarget.parentElement !== container)
+          insertTarget = insertTarget.parentElement;
+        container.insertBefore(btnContainer, insertTarget);
+      }
     }
 
     // ── Settings ─────────────────────────────────────────────────────────────
@@ -2887,6 +2893,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       bottom.dataset.seg = liveSegs.length;
       liveContent.appendChild(bottom);
 
+      addActionButtons(liveContent);
       _rendering = false;
     }
 
