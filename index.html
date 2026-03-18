@@ -435,6 +435,39 @@
     .code-output .out-err  { color: #f85149; }
     .code-output .out-meta { color: #6e7681; font-style: italic; font-size: 12px; }
 
+    /* ── Sort visualizer ── */
+    .sort-viz { border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; background: var(--surface); padding: 12px 16px; }
+    .sort-viz-controls { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
+    .sort-viz-controls button { padding: 3px 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 4px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .sort-viz-controls button:hover { background: var(--surface); }
+    .sort-viz-controls button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .sort-viz-controls input[type=range] { width: 60px; }
+    .sort-viz-label { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 4px; min-height: 16px; }
+    .sort-viz-row { display: flex; align-items: flex-end; gap: 1px; height: 140px; padding-bottom: 18px; position: relative; }
+    .sort-viz-bar { flex: 1; min-width: 2px; background: var(--accent); border-radius: 2px 2px 0 0; transition: height 0.12s ease-out, background-color 0.1s ease; position: relative; }
+    .sort-viz-bar.compare { background: #e3b341; }
+    .sort-viz-bar.swap { background: #f85149; }
+    .sort-viz-bar.sorted { background: #3fb950; }
+    .sort-viz-bar-label { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--text-muted); white-space: nowrap; }
+    .sort-viz-frame { font-variant-numeric: tabular-nums; font-size: 11px; color: var(--text-muted); }
+    .sort-viz-legend { display: flex; gap: 12px; font-size: 10px; color: var(--text-muted); margin-left: auto; }
+    .sort-viz-legend span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 3px; vertical-align: middle; }
+    .sort-viz-legend .leg-compare::before { background: #e3b341; }
+    .sort-viz-legend .leg-swap::before { background: #f85149; }
+    .sort-viz-legend .leg-sorted::before { background: #3fb950; }
+
+    /* ── Docs modal ── */
+    .docs-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:center; justify-content:center; }
+    .docs-overlay.open { display:flex; }
+    .docs-box { background:var(--bg); border:1px solid var(--border); border-radius:8px; width:min(860px,94vw); max-height:88vh; display:flex; flex-direction:column; }
+    .docs-head { display:flex; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border); gap:8px; }
+    .docs-head h2 { margin:0; font-size:15px; flex:1; }
+    .docs-close { background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted); padding:2px 6px; line-height:1; }
+    .docs-close:hover { color:var(--text); }
+    .docs-body { overflow-y:auto; padding:20px 24px; }
+    .docs-body .md-body h2 { margin-top:1.4em; }
+    .docs-body .md-body table { width:100%; }
+
     /* ── Mobile overrides ── */
     @media (max-width: 700px) {
       .tab-bar { display: flex; }
@@ -465,7 +498,20 @@
     <input type="file" id="importFile" accept=".md,.txt,text/markdown,text/plain" style="display:none">
     <button class="btn primary" id="shareBtn">Copy URL</button>
     <button class="btn" id="shortBtn">Short URL</button>
+    <button class="btn" id="docsBtn" title="Documentation">?</button>
   </header>
+
+  <div class="docs-overlay" id="docsOverlay">
+    <div class="docs-box">
+      <div class="docs-head">
+        <h2>litbin — documentation</h2>
+        <button class="docs-close" id="docsClose">&#x2715;</button>
+      </div>
+      <div class="docs-body">
+        <div id="docsContent" class="md-body"></div>
+      </div>
+    </div>
+  </div>
 
   <div class="tab-bar">
     <button class="active" data-target="editorPane">Edit</button>
@@ -495,7 +541,6 @@
   <div id="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/lz-string@1/libs/lz-string.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/lisp.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/haskell.min.js"></script>
@@ -532,7 +577,7 @@ graph LR
 **Whiteboard** — excalidraw blocks are interactive:
 
 \`\`\`excalidraw
-{}
+{"elements":[],"appState":{"viewBackgroundColor":"#ffffff","theme":"light"}}
 \`\`\`
 
 **Runnable code** — hit ▶ Run to execute via Wandbox:
@@ -545,6 +590,109 @@ def fib(n):
     return a
 
 print([fib(i) for i in range(10)])
+\`\`\`
+
+**Sort visualizer** — use \\\`sort:lang\\\` to animate algorithms. Print the array each step:
+
+\`\`\`sort:python
+# Insertion sort — sort_print is built in, no boilerplate needed
+arr = [8, 3, 12, 1, 9, 5, 15, 2, 7, 10, 4, 6]
+sort_print(arr)
+for i in range(1, len(arr)):
+    key = arr[i]
+    j = i - 1
+    while j >= 0 and arr[j] > key:
+        arr[j+1] = arr[j]
+        j -= 1
+    arr[j+1] = key
+    sort_print(arr, swap=j+1, compare=range(j+2, i+1))
+sort_print(arr)
+\`\`\`
+
+\`\`\`sort:python
+# Merge sort — always shows full array, [placed] in red
+disp = [8, 3, 12, 1, 9, 5, 15, 2]
+n = len(disp)
+def ms(lo, hi):
+    if hi-lo<=1: return
+    mid=(lo+hi)//2
+    ms(lo,mid); ms(mid,hi)
+    L,R=disp[lo:mid],disp[mid:hi]
+    i=j=0
+    for k in range(lo,hi):
+        if i<len(L) and (j>=len(R) or L[i]<=R[j]):
+            disp[k]=L[i]; i+=1
+        else:
+            disp[k]=R[j]; j+=1
+        sort_print(disp, swap=k)
+sort_print(disp)
+ms(0,n)
+sort_print(disp)
+\`\`\`
+
+\`\`\`sort:lisp
+; Quicksort - pivot at 1/3 of the subarray
+(defun swap-el (arr i j) (rotatef (aref arr i) (aref arr j)))
+
+(defun qs-partition (arr lo hi)
+  (let* ((pi (+ lo (floor (- hi lo) 3)))
+         (pv (aref arr pi)))
+    (swap-el arr pi hi)
+    (let ((store lo))
+      (loop for i from lo below hi do
+        (when (< (aref arr i) pv)
+          (sort-print arr :compare (list i store))
+          (swap-el arr i store)
+          (incf store)))
+      (swap-el arr store hi)
+      store)))
+
+(defun quicksort (arr lo hi)
+  (when (< lo hi)
+    (let ((p (qs-partition arr lo hi)))
+      (sort-print arr :swap p)
+      (when (> p lo) (quicksort arr lo (1- p)))
+      (quicksort arr (1+ p) hi))))
+
+(let* ((data '(9 3 7 1 8 2 6 4 10 5))
+       (arr (make-array (length data) :initial-contents data)))
+  (sort-print arr)
+  (quicksort arr 0 (1- (length arr)))
+  (sort-print arr))
+\`\`\`
+
+\`\`\`sort:rust
+fn partition(arr: &mut Vec<i64>, lo: usize, hi: usize) -> usize {
+    let pivot_idx = lo + (hi - lo) / 3;
+    arr.swap(pivot_idx, hi);
+    let pivot = arr[hi];
+    let mut store = lo;
+    for i in lo..hi {
+        if arr[i] < pivot {
+            sort_print(arr, &[i, store], &[]);
+            arr.swap(i, store);
+            store += 1;
+        }
+    }
+    arr.swap(store, hi);
+    store
+}
+
+fn qs(arr: &mut Vec<i64>, lo: usize, hi: usize) {
+    if lo >= hi { return; }
+    let p = partition(arr, lo, hi);
+    sort_print(arr, &[], &[p]);
+    if p > lo { qs(arr, lo, p - 1); }
+    if p < hi { qs(arr, p + 1, hi); }
+}
+
+fn main() {
+    let mut arr: Vec<i64> = vec![9, 3, 7, 1, 8, 2, 6, 4, 10, 5];
+    sort_print(&arr, &[], &[]);
+    let n = arr.len();
+    qs(&mut arr, 0, n - 1);
+    sort_print(&arr, &[], &[]);
+}
 \`\`\`
 
 ---
@@ -672,15 +820,11 @@ Everything you type is compressed and encoded into the URL fragment (the part af
     }
 
     async function decode(hash) {
-      try {                                         // deflate+base64url (new format)
-        const bytes = _fromB64url(hash);
-        const ds = new DecompressionStream('deflate-raw');
-        const w = ds.writable.getWriter();
-        w.write(bytes); w.close();
-        return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
-      } catch(e) {
-        return LZString.decompressFromEncodedURIComponent(hash) || ''; // legacy LZ-string
-      }
+      const bytes = _fromB64url(hash);
+      const ds = new DecompressionStream('deflate-raw');
+      const w = ds.writable.getWriter();
+      w.write(bytes); w.close();
+      return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
     }
 
     // ── Marked options ───────────────────────────────────────────────────────
@@ -780,7 +924,7 @@ Everything you type is compressed and encoded into the URL fragment (the part af
         appState: { viewBackgroundColor: appState.viewBackgroundColor, theme: appState.theme }
       });
       if (_drawingsFolded) {
-        // Update stored data without touching the folded placeholder
+        if ((_foldedData.get(id) || '').trim() === sceneJson) return;
         _foldedData.set(id, sceneJson);
       } else {
         let count = -1;
@@ -811,6 +955,9 @@ Everything you type is compressed and encoded into the URL fragment (the part af
 
         let initialData = null;
         try { initialData = JSON.parse(codeEl.textContent.trim()); } catch(e) {}
+        if (!initialData && _drawingsFolded && _foldedData.has(id)) {
+          try { initialData = JSON.parse(_foldedData.get(id)); } catch(e) {}
+        }
         initialData = initialData || { elements: [], appState: {} };
 
         const wrap = document.createElement('div');
@@ -899,7 +1046,285 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       sql:           { compiler: 'sqlite-3.46.1',         options: '' },
     };
 
+    // sort_print helpers injected before user code in sort:LANG blocks
+    // Usage: sort_print(arr)  /  sort_print(arr, compare=i, swap=j)
+    // compare/swap accept a single index or list of indices
+    const SORT_PREAMBLES = {
+      python: `def sort_print(a,compare=(),swap=()):
+  _c={compare}if isinstance(compare,int)else set(compare)
+  _s={swap}if isinstance(swap,int)else set(swap)
+  print(*[f"[{v}]"if i in _s else f"({v})"if i in _c else str(v)for i,v in enumerate(a)])
+`,
+      javascript: `function sort_print(a,{compare=[],swap=[]}={}){const c=new Set([].concat(compare)),s=new Set([].concat(swap));console.log(a.map((v,i)=>s.has(i)?'['+v+']':c.has(i)?'('+v+')':String(v)).join(' '));}
+`,
+      typescript: `function sort_print(a:number[],opts:{compare?:number|number[],swap?:number|number[]}={}){const c=new Set(([] as number[]).concat(opts.compare??[])),s=new Set(([] as number[]).concat(opts.swap??[]));console.log(a.map((v,i)=>s.has(i)?'['+v+']':c.has(i)?'('+v+')':String(v)).join(' '));}
+`,
+      ruby: `def sort_print(a,compare:[],swap:[]);c,s=[compare].flatten.to_set,[swap].flatten.to_set;puts a.each_with_index.map{|v,i|s.include?(i)?"[#{v}]":c.include?(i)?"(#{v})":v.to_s}.join(' ');end
+`,
+      cpp: `#include<vector>
+#include<set>
+#include<iostream>
+template<class T>void sort_print(const std::vector<T>&a,std::initializer_list<int>cmp={},std::initializer_list<int>swp={}){std::set<int>c(cmp),s(swp);for(int i=0;i<(int)a.size();i++){if(i)std::cout<<' ';if(s.count(i))std::cout<<'['<<a[i]<<']';else if(c.count(i))std::cout<<'('<<a[i]<<')';else std::cout<<a[i];}std::cout<<'\n';}
+`,
+      rust: `use std::collections::HashSet;
+fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:HashSet<_>=compare.iter().cloned().collect();let s:HashSet<_>=swap.iter().cloned().collect();let out:Vec<String>=a.iter().enumerate().map(|(i,v)|{if s.contains(&i){format!("[{}]",v)}else if c.contains(&i){format!("({})",v)}else{format!("{}",v)}}).collect();println!("{}",out.join(" "));}
+`,
+      lisp: `(defun sort-print (a &key compare swap)
+  (flet ((tl (x) (if (null x) nil (if (listp x) x (list x)))))
+    (let ((c (tl compare)) (s (tl swap)))
+      (format t "~{~a~^ ~}~%"
+        (loop for v in (coerce a 'list) for i from 0
+              collect (cond ((member i s) (format nil "[~a]" v))
+                            ((member i c) (format nil "(~a)" v))
+                            (t (format nil "~a" v))))))))
+`,
+    };
+    // Aliases
+    ['python3','py'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.python);
+    ['js'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.javascript);
+    ['ts'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.typescript);
+    ['rb'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.ruby);
+    ['c++','cxx'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.cpp);
+    ['rs'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.rust);
+    ['common-lisp','commonlisp'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.lisp);
+
     const outputCache = new Map(); // key: lang+'\x00'+code → {className, innerHTML}
+
+    // ── Docs modal ───────────────────────────────────────────────────────────
+    const DOCS_MD = `
+## Code execution
+
+Fenced code blocks with a supported language tag get a **\u25ba Run** button. Execution goes through the [Wandbox](https://wandbox.org/) public API — no backend required.
+
+### Supported languages
+
+| Language | Fence tags |
+|---|---|
+| Python | \`python\` \`python3\` \`py\` |
+| C | \`c\` |
+| C++ | \`cpp\` \`c++\` \`cxx\` |
+| Rust | \`rust\` \`rs\` |
+| Go | \`go\` |
+| Zig | \`zig\` |
+| D | \`d\` |
+| Nim | \`nim\` |
+| Java | \`java\` |
+| Groovy | \`groovy\` |
+| C# | \`csharp\` \`c#\` \`cs\` |
+| JavaScript | \`javascript\` \`js\` |
+| TypeScript | \`typescript\` \`ts\` |
+| Ruby | \`ruby\` \`rb\` |
+| PHP | \`php\` |
+| Perl | \`perl\` \`pl\` |
+| Lua | \`lua\` |
+| Bash | \`bash\` \`sh\` |
+| Haskell | \`haskell\` \`hs\` |
+| Common Lisp | \`lisp\` \`common-lisp\` \`commonlisp\` |
+| R | \`r\` |
+| Julia | \`julia\` \`jl\` |
+| Pascal | \`pascal\` \`pas\` |
+| SQL | \`sql\` |
+
+### Limitations
+
+- Wandbox is a free public API — no SLA, occasional downtime
+- No network access from within executed code
+- No stdin support
+- No persistent state between runs
+- **Java**: \`public class\` is stripped automatically (Wandbox filename requirement)
+- **Nim**: \`--hints:off\` applied to suppress verbose build output
+- **Common Lisp**: source must be ASCII-only (CLISP 2.49 limitation)
+- **Broken server-side on Wandbox**: OCaml, Swift, Erlang, Elixir (commented out)
+
+---
+
+## Sort visualizer
+
+Use \`sort:LANG\` as the fence tag instead of \`LANG\`. A **\u25ba Visualize** button replaces the Run button. After execution the output is parsed into animation frames.
+
+### Output format
+
+Each line of stdout is one frame. The visualizer reads space-separated values:
+
+| Syntax | Meaning | Color |
+|---|---|---|
+| \`42\` | plain value | blue (default) |
+| \`(42)\` | comparison | yellow |
+| \`[42]\` | swap / placement | red |
+
+The final frame with no annotations turns all bars **green**.
+
+Lines starting with \`#\` set a label shown above the bars. Blank lines and \`---\` are ignored.
+
+### sort_print
+
+A \`sort_print\` helper is **automatically injected** before your code — you never need to define or import it.
+
+\`\`\`
+sort_print(arr)                        // plain frame
+sort_print(arr, swap=j)                // bar j → red
+sort_print(arr, compare=i)             // bar i → yellow
+sort_print(arr, compare=[2,5], swap=3) // multiple indices
+\`\`\`
+
+\`compare\` and \`swap\` each accept a single index or a list of indices.
+
+### Implementations
+
+**Python**
+\`\`\`python
+def sort_print(a, compare=(), swap=()):
+    _c = {compare} if isinstance(compare, int) else set(compare)
+    _s = {swap} if isinstance(swap, int) else set(swap)
+    print(*[f"[{v}]" if i in _s else f"({v})" if i in _c else str(v)
+            for i, v in enumerate(a)])
+\`\`\`
+
+**JavaScript / TypeScript**
+\`\`\`javascript
+function sort_print(a, {compare=[], swap=[]}={}) {
+    const c = new Set([].concat(compare)), s = new Set([].concat(swap));
+    console.log(a.map((v,i) => s.has(i) ? \\\`[\${v}]\\\` : c.has(i) ? \\\`(\${v})\\\` : String(v)).join(' '));
+}
+\`\`\`
+
+**Ruby**
+\`\`\`ruby
+def sort_print(a, compare: [], swap: [])
+    c, s = [compare].flatten.to_set, [swap].flatten.to_set
+    puts a.each_with_index.map { |v, i|
+        s.include?(i) ? "[#{v}]" : c.include?(i) ? "(#{v})" : v.to_s
+    }.join(' ')
+end
+\`\`\`
+
+**C++**
+\`\`\`cpp
+#include <vector>
+#include <set>
+#include <iostream>
+template<class T>
+void sort_print(const std::vector<T>& a,
+                std::initializer_list<int> cmp = {},
+                std::initializer_list<int> swp = {}) {
+    std::set<int> c(cmp), s(swp);
+    for (int i = 0; i < (int)a.size(); i++) {
+        if (i) std::cout << ' ';
+        if (s.count(i))      std::cout << '[' << a[i] << ']';
+        else if (c.count(i)) std::cout << '(' << a[i] << ')';
+        else                 std::cout << a[i];
+    }
+    std::cout << '\\n';
+}
+\`\`\`
+
+**Rust**
+\`\`\`rust
+use std::collections::HashSet;
+fn sort_print<T: std::fmt::Display>(a: &[T], compare: &[usize], swap: &[usize]) {
+    let c: HashSet<_> = compare.iter().cloned().collect();
+    let s: HashSet<_> = swap.iter().cloned().collect();
+    let out: Vec<String> = a.iter().enumerate().map(|(i, v)| {
+        if s.contains(&i)      { format!("[{}]", v) }
+        else if c.contains(&i) { format!("({})", v) }
+        else                   { format!("{}", v)   }
+    }).collect();
+    println!("{}", out.join(" "));
+}
+\`\`\`
+
+**Common Lisp**
+\`\`\`lisp
+(defun sort-print (a &key compare swap)
+  (flet ((tl (x) (if (null x) nil (if (listp x) x (list x)))))
+    (let ((c (tl compare)) (s (tl swap)))
+      (format t "~{~a~^ ~}~%"
+        (loop for v in (coerce a 'list) for i from 0
+              collect (cond ((member i s) (format nil "[~a]" v))
+                            ((member i c) (format nil "(~a)" v))
+                            (t            (format nil "~a"   v))))))))
+\`\`\`
+
+### Manual format (other languages)
+
+For languages without a built-in helper, print space-separated values and wrap indices manually:
+
+\`\`\`
+8 (3) [2] 9 1 5    # bar 1 yellow, bar 2 red
+\`\`\`
+
+---
+
+## Excalidraw
+
+Fenced \`\`\`excalidraw\`\`\` blocks render as interactive whiteboards (React + Excalidraw via esm.sh CDN).
+
+- Scene JSON saves back into the markdown source automatically (600 ms debounce)
+- **Fold \u25c6** button in the header collapses all JSON to a placeholder — blocks fold by default on load
+- Theme follows light/dark mode
+
+---
+
+## Diagrams (Mermaid)
+
+Fenced \`\`\`mermaid\`\`\` blocks render as SVG. Supports all Mermaid diagram types. Theme-aware.
+
+---
+
+## Math (KaTeX)
+
+| Syntax | Renders as |
+|---|---|
+| \`\$...\$\` | Inline math |
+| \`\$\$...\$\$\` | Display block |
+
+Rendered via KaTeX with \`throwOnError: false\` (invalid expressions show as red text rather than crashing the page).
+
+---
+
+## URL storage
+
+Your document is stored in the URL fragment as **deflate-compressed, base64url-encoded** text. The fragment never leaves your browser — no server ever sees your content.
+
+| Threshold | Indicator |
+|---|---|
+| < 500 KB encoded | Normal |
+| > 500 KB encoded | Yellow warning |
+| > 1.5 MB encoded | Red error |
+
+**Short URLs**: the **Short URL** button calls the LinkShrink API to generate a 1-year shortlink.
+
+---
+
+## Live mode
+
+Click **Live** to enter Obsidian-style block editing. The document splits into blocks separated by blank lines (fences kept together).
+
+| Action | Result |
+|---|---|
+| Click block | Opens textarea editor |
+| Double newline | Splits block |
+| Backspace at start | Merges with previous block |
+| Arrow up/down at edges | Moves to adjacent block |
+| Escape | Exits current block |
+`;
+
+    const docsOverlay = document.getElementById('docsOverlay');
+    const docsContent = document.getElementById('docsContent');
+    const docsBtn     = document.getElementById('docsBtn');
+    const docsClose   = document.getElementById('docsClose');
+
+    function openDocs() {
+      if (!docsContent.innerHTML) {
+        docsContent.innerHTML = marked.parse(DOCS_MD);
+        if (typeof hljs !== 'undefined')
+          docsContent.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+      }
+      docsOverlay.classList.add('open');
+    }
+    docsBtn.addEventListener('click', openDocs);
+    docsClose.addEventListener('click', () => docsOverlay.classList.remove('open'));
+    docsOverlay.addEventListener('click', e => { if (e.target === docsOverlay) docsOverlay.classList.remove('open'); });
 
     async function executeCode(lang, code, outEl, btn) {
       const spec = EXEC_LANGS[lang.toLowerCase()];
@@ -972,7 +1397,12 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       container.querySelectorAll('pre code').forEach(codeEl => {
         const langClass = [...codeEl.classList].find(c => c.startsWith('language-'));
         if (!langClass) return;
-        const lang = langClass.slice(9);
+        const rawLang = langClass.slice(9);
+
+        // Detect sort:LANG pattern via data attr (set in render) or class
+        const isSort = !!codeEl.dataset.sortLang;
+        const lang = isSort ? codeEl.dataset.sortLang : rawLang;
+
         if (!EXEC_LANGS[lang.toLowerCase()]) return;
 
         const pre  = codeEl.parentElement;
@@ -983,21 +1413,301 @@ Everything you type is compressed and encoded into the URL fragment (the part af
 
         const btn = document.createElement('button');
         btn.className   = 'run-btn';
-        btn.textContent = '▶ Run';
+        btn.textContent = isSort ? '▶ Visualize' : '▶ Run';
         wrap.appendChild(btn);
 
         const outEl = document.createElement('div');
-        const cacheKey = lang + '\x00' + codeEl.textContent;
+        const cacheKey = rawLang + '\x00' + codeEl.textContent;
         const cached = outputCache.get(cacheKey);
         if (cached) { outEl.className = cached.className; outEl.innerHTML = cached.innerHTML; }
         else outEl.className = 'code-output';
         wrap.appendChild(outEl);
 
         btn.addEventListener('click', async () => {
-          await executeCode(lang, codeEl.textContent, outEl, btn);
+          if (isSort) {
+            await executeSortCode(lang, codeEl.textContent, outEl, wrap, btn);
+          } else {
+            await executeCode(lang, codeEl.textContent, outEl, btn);
+          }
           outputCache.set(cacheKey, { className: outEl.className, innerHTML: outEl.innerHTML });
         });
       });
+    }
+
+    // ── Sort visualizer ──────────────────────────────────────────────────────
+    // Output: one line per frame, space-separated numbers
+    //   (N) = comparing (yellow), [N] = swapping/writing (red)
+    //   # comment = label shown above frame
+    //   Plain numbers = default color; last frame = all green
+    function parseSortOutput(stdout) {
+      const frames = [];
+      const raw = stdout.trim();
+      if (!raw) return frames;
+
+      let currentLabel = '';
+
+      function parseRow(line) {
+        const parts = line.split(/\s+/);
+        const values = [], compare = new Set(), swap = new Set();
+        for (let j = 0; j < parts.length; j++) {
+          const p = parts[j];
+          // [N] = swap/write (red)
+          const sm = p.match(/^\[(-?\d+(?:\.\d+)?)\]$/);
+          if (sm) { values.push(Number(sm[1])); swap.add(j); continue; }
+          // (N) = compare (yellow)
+          const cm = p.match(/^\((-?\d+(?:\.\d+)?)\)$/);
+          if (cm) { values.push(Number(cm[1])); compare.add(j); continue; }
+          const n = Number(p);
+          if (!isNaN(n)) values.push(n);
+        }
+        return values.length ? { values, compare, swap } : null;
+      }
+
+      for (const line of raw.split('\n')) {
+        const trimmed = line.trim();
+        if (trimmed === '' || trimmed === '---') continue;
+        if (trimmed.startsWith('#')) { currentLabel = trimmed.slice(1).trim(); continue; }
+        const row = parseRow(trimmed);
+        if (row) {
+          frames.push({ label: currentLabel, rows: [row] });
+          currentLabel = '';
+        }
+      }
+      return frames;
+    }
+
+    function createSortVisualizer(frames, wrapEl) {
+      const viz = document.createElement('div');
+      viz.className = 'sort-viz';
+
+      // Find global max for consistent bar scaling across all frames
+      let maxVal = 1, barCount = 0;
+      for (const frame of frames) {
+        for (const row of frame.rows) {
+          barCount = Math.max(barCount, row.values.length);
+          for (const v of row.values) maxVal = Math.max(maxVal, Math.abs(v));
+        }
+      }
+
+      // Controls
+      const controls = document.createElement('div');
+      controls.className = 'sort-viz-controls';
+
+      const prevBtn = document.createElement('button');
+      prevBtn.textContent = '⏮';
+      prevBtn.title = 'Previous step';
+      const playBtn = document.createElement('button');
+      playBtn.textContent = '▶';
+      playBtn.title = 'Play/Pause';
+      const nextBtn = document.createElement('button');
+      nextBtn.textContent = '⏭';
+      nextBtn.title = 'Next step';
+
+      const speedLabel = document.createElement('span');
+      speedLabel.textContent = 'Speed:';
+      const speedSlider = document.createElement('input');
+      speedSlider.type = 'range';
+      speedSlider.min = '1';
+      speedSlider.max = '10';
+      speedSlider.value = '5';
+
+      const frameInfo = document.createElement('span');
+      frameInfo.className = 'sort-viz-frame';
+
+      const legend = document.createElement('div');
+      legend.className = 'sort-viz-legend';
+      legend.innerHTML = '<span class="leg-compare">compare</span><span class="leg-swap">swap</span><span class="leg-sorted">sorted</span>';
+
+      controls.append(prevBtn, playBtn, nextBtn, speedLabel, speedSlider, frameInfo, legend);
+
+      // Canvas: create bars once, update heights/classes per frame
+      const labelEl = document.createElement('div');
+      labelEl.className = 'sort-viz-label';
+
+      const rowEl = document.createElement('div');
+      rowEl.className = 'sort-viz-row';
+
+      // Pre-create bar elements
+      const bars = [];
+      const labels = [];
+      for (let i = 0; i < barCount; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'sort-viz-bar';
+        const lbl = document.createElement('span');
+        lbl.className = 'sort-viz-bar-label';
+        bar.appendChild(lbl);
+        rowEl.appendChild(bar);
+        bars.push(bar);
+        labels.push(lbl);
+      }
+
+      viz.append(controls, labelEl, rowEl);
+      wrapEl.appendChild(viz);
+
+      // State
+      let currentFrame = 0;
+      let playing = false;
+      let interval = null;
+      let greenTimers = [];
+      const isLastFrame = () => currentFrame === frames.length - 1;
+
+      function renderFrame(idx) {
+        greenTimers.forEach(t => clearTimeout(t));
+        greenTimers = [];
+
+        currentFrame = Math.max(0, Math.min(idx, frames.length - 1));
+        const frame = frames[currentFrame];
+        const row = frame.rows[0] || { values: [], compare: new Set(), swap: new Set() };
+        frameInfo.textContent = `${currentFrame + 1} / ${frames.length}`;
+        labelEl.textContent = frame.label || '';
+
+        const lastFrame = isLastFrame();
+        const hasAnnotations = row.compare.size > 0 || row.swap.size > 0;
+
+        for (let i = 0; i < barCount; i++) {
+          const bar = bars[i];
+          if (i < row.values.length) {
+            const v = row.values[i];
+            bar.style.display = '';
+            bar.style.height = (Math.abs(v) / maxVal * 100) + '%';
+            bar.className = 'sort-viz-bar';
+            if (row.compare.has(i)) bar.classList.add('compare');
+            else if (row.swap.has(i)) bar.classList.add('swap');
+            labels[i].textContent = barCount <= 30 ? v : '';
+            labels[i].style.display = barCount <= 30 ? '' : 'none';
+          } else {
+            bar.style.display = 'none';
+          }
+        }
+
+        if (lastFrame && !hasAnnotations) {
+          const step = Math.min(40, Math.round(500 / barCount));
+          for (let i = 0; i < barCount; i++) {
+            if (bars[i].style.display !== 'none') {
+              greenTimers.push(setTimeout(() => bars[i].classList.add('sorted'), i * step));
+            }
+          }
+        }
+      }
+
+      function getDelay() {
+        // Speed 1 = 1000ms, 5 = 200ms, 10 = 50ms
+        return Math.round(1000 / Number(speedSlider.value));
+      }
+
+      function play() {
+        playing = true;
+        playBtn.textContent = '⏸';
+        playBtn.classList.add('active');
+        interval = setInterval(() => {
+          if (currentFrame >= frames.length - 1) { pause(); return; }
+          renderFrame(currentFrame + 1);
+        }, getDelay());
+      }
+
+      function pause() {
+        playing = false;
+        playBtn.textContent = '▶';
+        playBtn.classList.remove('active');
+        clearInterval(interval);
+      }
+
+      playBtn.addEventListener('click', () => {
+        if (playing) pause();
+        else {
+          if (currentFrame >= frames.length - 1) renderFrame(0);
+          play();
+        }
+      });
+      prevBtn.addEventListener('click', () => { pause(); renderFrame(currentFrame - 1); });
+      nextBtn.addEventListener('click', () => { pause(); renderFrame(currentFrame + 1); });
+      speedSlider.addEventListener('input', () => {
+        if (playing) { clearInterval(interval); interval = setInterval(() => {
+          if (currentFrame >= frames.length - 1) { pause(); return; }
+          renderFrame(currentFrame + 1);
+        }, getDelay()); }
+      });
+
+      renderFrame(0);
+      return viz;
+    }
+
+    // Modified execution for sort blocks: run code, then visualize output
+    async function executeSortCode(lang, code, outEl, vizContainer, btn) {
+      const spec = EXEC_LANGS[lang.toLowerCase()];
+      if (!spec) return;
+
+      btn.disabled = true;
+      btn.textContent = '⏳';
+      outEl.className = 'code-output visible';
+      outEl.innerHTML = '<span class="out-meta">Running…</span>';
+
+      // Remove any previous visualizer
+      const oldViz = vizContainer.querySelector('.sort-viz');
+      if (oldViz) oldViz.remove();
+
+      try {
+        const res = await fetch('https://wandbox.org/api/compile.json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            compiler: spec.compiler,
+            code: (() => {
+              const preamble = SORT_PREAMBLES[lang.toLowerCase()] || '';
+              const userCode = spec.transform ? spec.transform(code) : code;
+              return preamble ? preamble + '\n' + userCode : userCode;
+            })(),
+            options: spec.options,
+            ...(spec.rawOptions ? { 'compiler-option-raw': spec.rawOptions } : {}),
+          }),
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        if (data.compiler_error) {
+          outEl.innerHTML = '';
+          const el = document.createElement('span');
+          el.className = 'out-err';
+          el.textContent = data.compiler_error;
+          outEl.appendChild(el);
+        } else if (data.program_output) {
+          // Parse and visualize
+          const frames = parseSortOutput(data.program_output);
+          if (frames.length > 0) {
+            outEl.className = 'code-output'; // hide raw output
+            outEl.innerHTML = '';
+            createSortVisualizer(frames, vizContainer);
+          } else {
+            outEl.innerHTML = '';
+            const el = document.createElement('span');
+            el.textContent = data.program_output;
+            outEl.appendChild(el);
+          }
+        } else {
+          outEl.innerHTML = '<span class="out-meta">(no output)</span>';
+        }
+
+        if (data.program_error) {
+          const el = document.createElement('span');
+          el.className = 'out-err';
+          el.textContent = data.program_error;
+          outEl.appendChild(el);
+          if (!outEl.classList.contains('visible')) outEl.className = 'code-output visible';
+        }
+
+        if (data.status && data.status !== '0') {
+          const el = document.createElement('span');
+          el.className = 'out-meta';
+          el.textContent = `\nexited with code ${data.status}`;
+          outEl.appendChild(el);
+        }
+      } catch(err) {
+        outEl.innerHTML = `<span class="out-err">Error: ${err.message}</span>`;
+      }
+
+      btn.disabled = false;
+      btn.textContent = '▶ Run';
     }
 
     // ── Line numbers ────────────────────────────────────────────────────────
@@ -1036,8 +1746,17 @@ Everything you type is compressed and encoded into the URL fragment (the part af
     // ── Render ───────────────────────────────────────────────────────────────
     function render() {
       preview.innerHTML = marked.parse(editor.value);
+      // Fix sort:LANG — swap class for hljs, preserve original in data attr
+      preview.querySelectorAll('pre code[class*="language-sort"]').forEach(el => {
+        const m = el.className.match(/language-sort([:-])(\S+)/);
+        if (m) {
+          el.dataset.sortLang = m[2];
+          el.classList.remove('language-sort' + m[1] + m[2]);
+          el.classList.add('language-' + m[2]);
+        }
+      });
       if (typeof hljs !== 'undefined')
-        preview.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+        preview.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(preview);
       renderMermaid(preview);
       renderExcalidraw(preview);
@@ -1085,6 +1804,7 @@ Everything you type is compressed and encoded into the URL fragment (the part af
       const hash = location.hash.slice(1);
       try { editor.value = hash ? await decode(hash) : DEFAULT; } catch(e) { editor.value = DEFAULT; }
       updateFoldBtnVisibility();
+      if (hasExcalidrawBlocks(editor.value)) foldDrawings();
       render();
       try { updateSize(hash ? hash : await encode(getEditorContent())); } catch(e) {}
     })();
@@ -1315,6 +2035,14 @@ Everything you type is compressed and encoded into the URL fragment (the part af
     function parsedDiv(md) {
       const d = document.createElement('div');
       d.innerHTML = marked.parse(md || '\u200b');
+      d.querySelectorAll('pre code[class*="language-sort"]').forEach(el => {
+        const m = el.className.match(/language-sort([:-])(\S+)/);
+        if (m) {
+          el.dataset.sortLang = m[2];
+          el.classList.remove('language-sort' + m[1] + m[2]);
+          el.classList.add('language-' + m[2]);
+        }
+      });
       if (typeof hljs !== 'undefined')
         d.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
       attachRunButtons(d);
