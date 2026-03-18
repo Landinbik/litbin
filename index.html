@@ -1034,7 +1034,9 @@ int main() {
             const val = ta.value, cursor = ta.selectionStart;
             const nl2 = val.indexOf('\n\n');
 
-            if (nl2 !== -1) {
+            const insideFence = (text, pos) => (text.slice(0, pos).match(/^```/mg) || []).length % 2 === 1;
+
+            if (nl2 !== -1 && !insideFence(val, nl2)) {
               // Split on double-newline immediately
               const before = val.slice(0, nl2);
               const rest   = val.slice(nl2 + 2);
