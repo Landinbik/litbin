@@ -21,8 +21,8 @@ The current stack uses LZ-string `compressToEncodedURIComponent` (base64url, 6 b
 ### Mermaid diagrams
 Render fenced ` ```mermaid ``` ` blocks as flowcharts, sequence diagrams, etc. One CDN script. Very popular in markdown tools and a natural fit.
 
-### KaTeX math
-Render `$inline$` and `$$block$$` LaTeX via KaTeX (CDN). No backend needed.
+### ~~KaTeX math~~ ✓ done
+~~Render `$inline$` and `$$block$$` LaTeX via KaTeX (CDN).~~ Implemented via marked extension. Inline: `$...$` (no leading/trailing spaces). Block: `$$...$$`.
 
 ### Table of contents
 Auto-generate from headings. Could live as a collapsible sidebar or injected at the top of the preview.

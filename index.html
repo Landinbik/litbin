@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>mdbin</title>
   <link rel="stylesheet" id="hljs-theme" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <style>
     :root {
       --bg: #ffffff;
@@ -228,6 +229,7 @@
     .md-body tr:nth-child(even) td { background: var(--surface); }
 
     .md-body img  { max-width: 100%; border-radius: 4px; }
+    .math-block   { overflow-x: auto; margin: 1em 0; text-align: center; }
     .md-body hr   { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
 
     .md-body input[type="checkbox"] { margin-right: 6px; }
@@ -403,6 +405,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/julia.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/nim.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/d.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script>
     const DEFAULT = `# Language Test Page
 
@@ -666,6 +669,33 @@ SELECT 'hello from SQL' AS message;
 
     // ── Marked options ───────────────────────────────────────────────────────
     marked.use({ breaks: true, gfm: true });
+
+    // ── KaTeX math extension ─────────────────────────────────────────────────
+    if (typeof katex !== 'undefined') {
+      const renderMath = (math, display) =>
+        katex.renderToString(math, { displayMode: display, throwOnError: false });
+
+      marked.use({ extensions: [
+        {
+          name: 'blockMath', level: 'block',
+          start(src) { return src.indexOf('$$'); },
+          tokenizer(src) {
+            const m = src.match(/^\$\$([\s\S]+?)\$\$/);
+            if (m) return { type: 'blockMath', raw: m[0], math: m[1].trim() };
+          },
+          renderer(t) { return `<div class="math-block">${renderMath(t.math, true)}</div>\n`; }
+        },
+        {
+          name: 'inlineMath', level: 'inline',
+          start(src) { return src.indexOf('$'); },
+          tokenizer(src) {
+            const m = src.match(/^\$(\S[^$\n]*?\S|\S)\$/);
+            if (m) return { type: 'inlineMath', raw: m[0], math: m[1] };
+          },
+          renderer(t) { return renderMath(t.math, false); }
+        }
+      ]});
+    }
 
     // ── Code execution (Wandbox API) ─────────────────────────────────────────
     const EXEC_LANGS = {
