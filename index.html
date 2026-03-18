@@ -456,6 +456,15 @@
     .sort-viz-legend .leg-swap::before { background: #f85149; }
     .sort-viz-legend .leg-sorted::before { background: #3fb950; }
 
+    /* ── Lit data blocks ── */
+    .lit-data-block { border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 1em 0; font-family: var(--font-mono, monospace); font-size: 13px; }
+    .lit-data-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 8px; }
+    .lit-data-table { border-collapse: collapse; width: 100%; }
+    .lit-data-table td { padding: 2px 8px 2px 0; vertical-align: top; }
+    .lit-data-table td:first-child { color: var(--accent); font-weight: 700; white-space: nowrap; padding-right: 12px; }
+    .lit-data-table td:nth-child(2) { color: var(--text-muted); font-size: 11px; white-space: nowrap; padding-right: 12px; }
+    .lit-data-table td:nth-child(3) { color: var(--text); word-break: break-all; }
+
     /* ── Docs modal ── */
     .docs-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:center; justify-content:center; }
     .docs-overlay.open { display:flex; }
@@ -660,48 +669,18 @@
 
 A literate markdown pastebin. No accounts, no databases, no backend. **Your entire document is stored in the URL** — share the link, share the content.
 
-Write about a leetcode problem. Sketch an algorithm. Jot down an idea. Draft a short explanation. Hit **Share** and send the link.
-
 ---
 
-## What you can do
+## Sort visualizer
 
-**Math** — inline $O(n \\log n)$ or display blocks:
+Use \`sort:lang\` as the fence tag to animate sorting algorithms. Define your dataset once in a \`data\` block — inject it into every implementation with \`{varname}\` in the fence tag:
 
-$$\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$$
-
-**Diagrams** — mermaid blocks render automatically, and \\\`excalidraw\\\` blocks open an interactive whiteboard:
-
-\`\`\`mermaid
-graph LR
-    A[Write markdown] --> B[URL updates live]
-    B --> C[Share the link]
-    C --> D[They see your content]
+\`\`\`data
+arr = [8, 3, 12, 1, 9, 5, 15, 2, 7, 10]
 \`\`\`
 
-**Whiteboard** — excalidraw blocks are interactive:
-
-\`\`\`excalidraw
-{"elements":[],"appState":{"viewBackgroundColor":"#ffffff","theme":"light"}}
-\`\`\`
-
-**Runnable code** — hit ▶ Run to execute via Wandbox:
-
-\`\`\`python
-def fib(n):
-    a, b = 0, 1
-    for _ in range(n):
-        a, b = b, a + b
-    return a
-
-print([fib(i) for i in range(10)])
-\`\`\`
-
-**Sort visualizer** — use \\\`sort:lang\\\` to animate algorithms. Print the array each step:
-
-\`\`\`sort:python
-# Insertion sort — sort_print is built in, no boilerplate needed
-arr = [8, 3, 12, 1, 9, 5, 15, 2, 7, 10, 4, 6]
+\`\`\`sort:python {arr}
+# Insertion sort -- sort_print is built in, arr injected from the data block
 sort_print(arr)
 for i in range(1, len(arr)):
     key = arr[i]
@@ -714,9 +693,9 @@ for i in range(1, len(arr)):
 sort_print(arr)
 \`\`\`
 
-\`\`\`sort:python
-# Merge sort — always shows full array, [placed] in red
-disp = [8, 3, 12, 1, 9, 5, 15, 2]
+\`\`\`sort:python {arr}
+# Merge sort
+disp = list(arr)
 n = len(disp)
 def ms(lo, hi):
     if hi-lo<=1: return
@@ -735,70 +714,60 @@ ms(0,n)
 sort_print(disp)
 \`\`\`
 
-\`\`\`sort:lisp
-; Quicksort - pivot at 1/3 of the subarray
-(defun swap-el (arr i j) (rotatef (aref arr i) (aref arr j)))
-
-(defun qs-partition (arr lo hi)
-  (let* ((pi (+ lo (floor (- hi lo) 3)))
-         (pv (aref arr pi)))
-    (swap-el arr pi hi)
+\`\`\`sort:lisp {arr}
+; Quicksort -- 1/3 pivot, arr injected from the data block
+(defun swap-el (a i j) (rotatef (aref a i) (aref a j)))
+(defun qs-partition (a lo hi)
+  (let* ((pi (+ lo (floor (- hi lo) 3))) (pv (aref a pi)))
+    (swap-el a pi hi)
     (let ((store lo))
       (loop for i from lo below hi do
-        (when (< (aref arr i) pv)
-          (sort-print arr :compare (list i store))
-          (swap-el arr i store)
+        (when (< (aref a i) pv)
+          (sort-print a :compare (list i store))
+          (swap-el a i store)
           (incf store)))
-      (swap-el arr store hi)
-      store)))
-
-(defun quicksort (arr lo hi)
+      (swap-el a store hi) store)))
+(defun quicksort (a lo hi)
   (when (< lo hi)
-    (let ((p (qs-partition arr lo hi)))
-      (sort-print arr :swap p)
-      (when (> p lo) (quicksort arr lo (1- p)))
-      (quicksort arr (1+ p) hi))))
-
-(let* ((data '(9 3 7 1 8 2 6 4 10 5))
-       (arr (make-array (length data) :initial-contents data)))
-  (sort-print arr)
-  (quicksort arr 0 (1- (length arr)))
-  (sort-print arr))
+    (let ((p (qs-partition a lo hi)))
+      (sort-print a :swap p)
+      (when (> p lo) (quicksort a lo (1- p)))
+      (quicksort a (1+ p) hi))))
+(sort-print arr)
+(quicksort arr 0 (1- (length arr)))
+(sort-print arr)
 \`\`\`
 
-\`\`\`sort:rust
-fn partition(arr: &mut Vec<i64>, lo: usize, hi: usize) -> usize {
-    let pivot_idx = lo + (hi - lo) / 3;
-    arr.swap(pivot_idx, hi);
-    let pivot = arr[hi];
-    let mut store = lo;
-    for i in lo..hi {
-        if arr[i] < pivot {
-            sort_print(arr, &[i, store], &[]);
-            arr.swap(i, store);
-            store += 1;
-        }
-    }
-    arr.swap(store, hi);
-    store
-}
+---
 
-fn qs(arr: &mut Vec<i64>, lo: usize, hi: usize) {
-    if lo >= hi { return; }
-    let p = partition(arr, lo, hi);
-    sort_print(arr, &[], &[p]);
-    if p > lo { qs(arr, lo, p - 1); }
-    if p < hi { qs(arr, p + 1, hi); }
-}
+## What else you can do
 
-fn main() {
-    let mut arr: Vec<i64> = vec![9, 3, 7, 1, 8, 2, 6, 4, 10, 5];
-    sort_print(&arr, &[], &[]);
-    let n = arr.len();
-    qs(&mut arr, 0, n - 1);
-    sort_print(&arr, &[], &[]);
-}
+**Math** — inline $O(n \\log n)$ or display blocks:
+
+$$\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$$
+
+**Diagrams** — mermaid blocks render automatically:
+
+\`\`\`mermaid
+graph LR
+    A[Write markdown] --> B[URL updates live]
+    B --> C[Share the link]
+    C --> D[They see your content]
 \`\`\`
+
+**Runnable code** — any supported language, hit ▶ Run:
+
+\`\`\`python
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+
+print([fib(i) for i in range(10)])
+\`\`\`
+
+**Slides** — click **Slides** (or open with \`?slides\` in the URL) for a fullscreen presentation. Each \`---\` separator becomes a slide boundary.
 
 ---
 
@@ -806,9 +775,7 @@ fn main() {
 
 Everything you type is compressed and encoded into the URL fragment (the part after \`#\`). The fragment never leaves your browser — no server ever sees your content.
 
-**Size limits:** A few hundred KB of markdown fits comfortably in a URL. That's enough for any note, explanation, or code snippet you'd reasonably want to share. The status bar shows URL size as you type.
-
-**Short URLs:** For cleaner links, hit **Short URL** to get a shortlink (valid for 1 year).
+**Short URLs:** Hit **Short URL** for a 1-year shortlink.
 
 ---
 
@@ -957,6 +924,50 @@ Everything you type is compressed and encoded into the URL fragment (the part af
 
     // ── Marked options ───────────────────────────────────────────────────────
     marked.use({ breaks: true, gfm: true });
+
+    // ── Custom code renderer (data blocks + lit-var injection) ───────────────
+    marked.use({ renderer: {
+      code(code, lang, escaped) {
+        lang = (lang || '').trim();
+
+        // data block → styled table
+        if (lang === 'data') {
+          const rows = code.split('\n').map(line => {
+            const lm = line.match(/^\s*([\w$]+)\s*=\s*(.+?)\s*$/);
+            if (!lm) return '';
+            let type = 'string';
+            try {
+              const v = JSON.parse(lm[2]);
+              if (Array.isArray(v)) type = 'array[' + v.length + ']';
+              else if (typeof v === 'number') type = Number.isInteger(v) ? 'int' : 'float';
+              else if (typeof v === 'boolean') type = 'bool';
+            } catch(e) {}
+            return `<tr><td>${lm[1]}</td><td>${type}</td><td>${lm[2]}</td></tr>`;
+          }).filter(Boolean).join('');
+          return `<div class="lit-data-block"><div class="lit-data-label">data</div><table class="lit-data-table">${rows}</table></div>`;
+        }
+
+        // parse {varname,...} refs from infostring
+        const varRefs = [];
+        const varRe = /\{([^}]+)\}/g;
+        let vm;
+        while ((vm = varRe.exec(lang)) !== null) {
+          vm[1].split(',').forEach(n => { const t = n.trim(); if (t) varRefs.push(t); });
+        }
+        // strip {var} groups from lang for class name
+        const cleanLang = lang.replace(/\{[^}]*\}/g, '').trim();
+
+        if (varRefs.length === 0) return false; // default rendering
+
+        // emit custom HTML with data-lit-vars
+        // extract actual language from possible "sort:LANG" prefix for hljs
+        const hljsLang = cleanLang.replace(/^sort[:-]/, '');
+        const highlighted = (typeof hljs !== 'undefined' && hljsLang)
+          ? (hljs.getLanguage(hljsLang) ? hljs.highlight(code, { language: hljsLang }).value : code.replace(/&/g,'&amp;').replace(/</g,'&lt;'))
+          : code.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        return `<pre><code class="language-${cleanLang} hljs" data-lit-vars="${varRefs.join(',')}">${highlighted}</code></pre>`;
+      }
+    }});
 
     // ── KaTeX math extension ─────────────────────────────────────────────────
     if (typeof katex !== 'undefined') {
@@ -1232,6 +1243,62 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
     ['rs'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.rust);
     ['common-lisp','commonlisp'].forEach(k => SORT_PREAMBLES[k] = SORT_PREAMBLES.lisp);
 
+    // ── Lit variable system ──────────────────────────────────────────────────
+    let _litVars = {};
+
+    function extractLitVars(mdText) {
+      const vars = {};
+      const re = /^```data\n([\s\S]*?)^```/gm;
+      let m;
+      while ((m = re.exec(mdText)) !== null) {
+        m[1].split('\n').forEach(line => {
+          const lm = line.match(/^\s*([\w$]+)\s*=\s*(.+?)\s*$/);
+          if (!lm) return;
+          try { vars[lm[1]] = JSON.parse(lm[2]); }
+          catch(e) { vars[lm[1]] = lm[2]; }
+        });
+      }
+      return vars;
+    }
+
+    function serializeLitVar(name, value, lang) {
+      const l = lang.toLowerCase();
+      const isArr = Array.isArray(value);
+      const allInt = isArr && value.every(v => Number.isInteger(v));
+      const jsonVal = JSON.stringify(value);
+      if (['python','python3','py'].includes(l)) return `${name} = ${jsonVal}`;
+      if (['javascript','js'].includes(l)) return `const ${name} = ${jsonVal};`;
+      if (['typescript','ts'].includes(l)) {
+        const type = isArr ? (allInt ? 'number[]' : 'any[]') : typeof value === 'number' ? 'number' : typeof value === 'string' ? 'string' : 'any';
+        return `const ${name}: ${type} = ${jsonVal};`;
+      }
+      if (['ruby','rb'].includes(l)) return `${name} = ${jsonVal}`;
+      if (['cpp','c++','cxx'].includes(l)) {
+        if (isArr && allInt) return `std::vector<int> ${name} = {${value.join(', ')}};`;
+        if (isArr) return `std::vector<double> ${name} = {${value.join(', ')}};`;
+        if (typeof value === 'number') return `auto ${name} = ${value};`;
+        return `// ${name} = ${jsonVal}`;
+      }
+      if (['rust','rs'].includes(l)) {
+        if (isArr && allInt) return `let mut ${name} = vec![${value.join(', ')}];`;
+        if (isArr) return `let mut ${name}: Vec<f64> = vec![${value.join(', ')}];`;
+        if (typeof value === 'number') return `let ${name} = ${value};`;
+        return `// ${name} = ${jsonVal}`;
+      }
+      if (['lisp','common-lisp','commonlisp'].includes(l)) {
+        if (isArr) return `(defvar ${name} #(${value.join(' ')}))`;
+        return `(defvar ${name} ${JSON.stringify(value)})`;
+      }
+      return `// ${name} = ${jsonVal}`;
+    }
+
+    function buildLitVarInjection(refs, lang) {
+      return refs
+        .filter(name => Object.prototype.hasOwnProperty.call(_litVars, name))
+        .map(name => serializeLitVar(name, _litVars[name], lang))
+        .join('\n');
+    }
+
     const outputCache = new Map(); // key: lang+'\x00'+code → {className, innerHTML}
 
     // ── Docs modal ───────────────────────────────────────────────────────────
@@ -1470,7 +1537,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     docsClose.addEventListener('click', () => docsOverlay.classList.remove('open'));
     docsOverlay.addEventListener('click', e => { if (e.target === docsOverlay) docsOverlay.classList.remove('open'); });
 
-    async function executeCode(lang, code, outEl, btn) {
+    async function executeCode(lang, code, outEl, btn, varRefs = []) {
       const spec = EXEC_LANGS[lang.toLowerCase()];
       if (!spec) return;
 
@@ -1480,12 +1547,15 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       outEl.innerHTML = '<span class="out-meta">Running…</span>';
 
       try {
+        const varInjection = buildLitVarInjection(varRefs, lang);
+        const userCode = spec.transform ? spec.transform(code) : code;
+        const finalCode = [varInjection, userCode].filter(Boolean).join('\n');
         const res = await fetch('https://wandbox.org/api/compile.json', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
             compiler: spec.compiler,
-            code:     spec.transform ? spec.transform(code) : code,
+            code:     finalCode,
             options:  spec.options,
             ...(spec.rawOptions ? { 'compiler-option-raw': spec.rawOptions } : {}),
           }),
@@ -1567,11 +1637,13 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         else outEl.className = 'code-output';
         wrap.appendChild(outEl);
 
+        const varRefs = codeEl.dataset.litVars ? codeEl.dataset.litVars.split(',').filter(Boolean) : [];
+
         btn.addEventListener('click', async () => {
           if (isSort) {
-            await executeSortCode(lang, codeEl.textContent, outEl, wrap, btn);
+            await executeSortCode(lang, codeEl.textContent, outEl, wrap, btn, varRefs);
           } else {
-            await executeCode(lang, codeEl.textContent, outEl, btn);
+            await executeCode(lang, codeEl.textContent, outEl, btn, varRefs);
           }
           outputCache.set(cacheKey, { className: outEl.className, innerHTML: outEl.innerHTML });
         });
@@ -1803,7 +1875,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     }
 
     // Modified execution for sort blocks: run code, then visualize output
-    async function executeSortCode(lang, code, outEl, vizContainer, btn) {
+    async function executeSortCode(lang, code, outEl, vizContainer, btn, varRefs = []) {
       const spec = EXEC_LANGS[lang.toLowerCase()];
       if (!spec) return;
 
@@ -1823,9 +1895,10 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
           body: JSON.stringify({
             compiler: spec.compiler,
             code: (() => {
+              const varInjection = buildLitVarInjection(varRefs, lang);
               const preamble = SORT_PREAMBLES[lang.toLowerCase()] || '';
               const userCode = spec.transform ? spec.transform(code) : code;
-              return preamble ? preamble + '\n' + userCode : userCode;
+              return [varInjection, preamble, userCode].filter(Boolean).join('\n');
             })(),
             options: spec.options,
             ...(spec.rawOptions ? { 'compiler-option-raw': spec.rawOptions } : {}),
@@ -1915,6 +1988,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
 
     // ── Render ───────────────────────────────────────────────────────────────
     function render() {
+      _litVars = extractLitVars(editor.value);
       preview.innerHTML = marked.parse(editor.value);
       // Fix sort:LANG — swap class for hljs, preserve original in data attr
       preview.querySelectorAll('pre code[class*="language-sort"]').forEach(el => {
@@ -1926,7 +2000,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         }
       });
       if (typeof hljs !== 'undefined')
-        preview.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw)').forEach(el => hljs.highlightElement(el));
+        preview.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw):not(.hljs)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(preview);
       renderMermaid(preview);
       renderExcalidraw(preview);
@@ -2473,7 +2547,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         }
       });
       if (typeof hljs !== 'undefined')
-        d.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+        d.querySelectorAll('pre code:not(.hljs)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(d);
       renderMermaid(d);
       renderExcalidraw(d);
@@ -2732,7 +2806,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         }
       });
       if (typeof hljs !== 'undefined')
-        div.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw)').forEach(el => hljs.highlightElement(el));
+        div.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw):not(.hljs)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(div);
       renderMermaid(div);
       renderExcalidraw(div);
@@ -2754,6 +2828,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
 
     function openSlides() {
       slidesMode = true;
+      _litVars = extractLitVars(getEditorContent());
       slidesArray = splitSlides(editor.value);
       slidesIdx = 0;
       slidesOverlay.classList.add('open');
