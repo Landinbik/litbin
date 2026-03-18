@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A single-file (`index.html`) markdown pastebin. Zero backend. The entire document is stored in the URL hash as LZ-compressed, URI-encoded text — sharing a URL shares the content.
+**litbin** — a single-file (`index.html`) literate programming pastebin. Zero backend. The entire document is stored in the URL hash as deflate-compressed, base64url-encoded text — sharing a URL shares the content.
 
 ## URL storage model
 
