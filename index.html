@@ -940,7 +940,7 @@ int main() {
       shortBtn.disabled = true;
       shortBtn.textContent = '…';
       try {
-        const res = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(location.href));
+        const res = await fetch('https://is.gd/create.php?format=simple&url=' + encodeURIComponent(location.href));
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const short = await res.text();
         await navigator.clipboard.writeText(short.trim());
