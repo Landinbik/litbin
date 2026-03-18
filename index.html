@@ -1077,8 +1077,8 @@ SELECT 'hello from SQL' AS message;
           const wrap = document.createElement('div');
           wrap.className = 'live-block md-body';
           wrap.append(...parsedDiv(seg.text).childNodes);
-          wrap.addEventListener('mousedown', () => { nextActiveIdx = i; });
-          wrap.addEventListener('click', () => { if (liveActiveIdx === null) activate(i); });
+          wrap.addEventListener('mousedown', e => { if (!e.target.closest('.run-btn')) nextActiveIdx = i; });
+          wrap.addEventListener('click', e => { if (!e.target.closest('.run-btn') && liveActiveIdx === null) activate(i); });
           liveContent.appendChild(wrap);
         }
       });
