@@ -533,6 +533,16 @@
     body.viewer .pane-label { display: none !important; }
     body.viewer #previewPane { flex: 1 !important; }
 
+    /* ── Slides-only mode ── */
+    body.slides-only header,
+    body.slides-only #editorPane,
+    body.slides-only #divider,
+    body.slides-only #previewPane,
+    body.slides-only main,
+    body.slides-only .tab-bar,
+    body.slides-only #livePane { display: none !important; }
+    body.slides-only #slidesOverlay { z-index: 1 !important; }
+
     @media print {
       @page { margin: 1.5cm; }
       html, body { height: auto; overflow: visible; }
@@ -814,22 +824,33 @@ Everything you type is compressed and encoded into the URL fragment (the part af
     const previewPane = document.getElementById('previewPane');
     const foldBtn     = document.getElementById('foldBtn');
 
-    // ── Viewer mode ──────────────────────────────────────────────────────────
+    // ── Viewer mode & Slides mode ────────────────────────────────────────────
     let viewerMode = new URLSearchParams(location.search).has('view');
+    let slidesAutoOpen = new URLSearchParams(location.search).has('slides');
     const viewBtn = document.getElementById('viewBtn');
 
     function setHash(encoded) {
-      history.replaceState(null, '', (viewerMode ? '?view' : '') + '#' + encoded);
+      const params = [];
+      if (viewerMode) params.push('view');
+      if (slidesAutoOpen) params.push('slides');
+      const prefix = params.length > 0 ? '?' + params.join('&') : '';
+      history.replaceState(null, '', prefix + '#' + encoded);
     }
 
     function applyViewer() {
       document.body.classList.toggle('viewer', viewerMode);
       viewBtn.textContent = viewerMode ? 'Edit' : 'View';
       if (viewerMode) {
-        const url = location.origin + location.pathname + '?view' + location.hash;
+        const params = [];
+        if (slidesAutoOpen) params.push('slides');
+        const prefix = params.length > 0 ? '&' + params.join('&') : '';
+        const url = location.origin + location.pathname + '?view' + prefix + location.hash;
         history.replaceState(null, '', url);
       } else {
-        history.replaceState(null, '', location.hash || location.href.replace(location.search, ''));
+        const params = [];
+        if (slidesAutoOpen) params.push('slides');
+        const prefix = params.length > 0 ? '?' + params.join('&') : '';
+        history.replaceState(null, '', prefix + location.hash || location.href.replace(location.search, ''));
       }
     }
 
@@ -1937,6 +1958,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       if (hasExcalidrawBlocks(editor.value)) foldDrawings();
       render();
       try { updateSize(hash ? hash : await encode(getEditorContent())); } catch(e) {}
+      if (slidesAutoOpen) applySlidesMode();
     })();
 
     // ── List editing helpers ────────────────────────────────────────────────
@@ -2704,8 +2726,26 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       slidesIdx = 0;
     }
 
-    slidesBtn.addEventListener('click', openSlides);
-    slidesExit.addEventListener('click', closeSlides);
+    function applySlidesMode() {
+      document.body.classList.toggle('slides-only', slidesAutoOpen);
+      if (slidesAutoOpen) {
+        const params = [];
+        if (viewerMode) params.push('view');
+        params.push('slides');
+        const prefix = params.length > 0 ? '?' + params.join('&') : '';
+        history.replaceState(null, '', prefix + location.hash);
+        openSlides();
+      } else {
+        closeSlides();
+        const params = [];
+        if (viewerMode) params.push('view');
+        const prefix = params.length > 0 ? '?' + params.join('&') : '';
+        history.replaceState(null, '', (prefix || '') + location.hash);
+      }
+    }
+
+    slidesBtn.addEventListener('click', () => { slidesAutoOpen = !slidesAutoOpen; applySlidesMode(); });
+    slidesExit.addEventListener('click', () => { slidesAutoOpen = false; applySlidesMode(); });
     slidesPrev.addEventListener('click', () => renderSlide(slidesIdx - 1));
     slidesNext.addEventListener('click', () => renderSlide(slidesIdx + 1));
     slidesArrowLeft.addEventListener('click', () => renderSlide(slidesIdx - 1));
