@@ -999,6 +999,15 @@ Everything you type is compressed and encoded into the URL fragment (the part af
           ta.addEventListener('keydown', e => {
             const pos = ta.selectionStart, val = ta.value;
 
+            if (e.key === 'Tab') {
+              e.preventDefault();
+              const end = ta.selectionEnd;
+              ta.value = val.substring(0, pos) + '  ' + val.substring(end);
+              ta.selectionStart = ta.selectionEnd = pos + 2;
+              ta.dispatchEvent(new Event('input'));
+              return;
+            }
+
             if (e.key === 'Backspace' && pos === 0 && ta.selectionEnd === 0) {
               const prev = nearestBlock(i, -1);
               if (prev !== null) {
