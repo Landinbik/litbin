@@ -1834,19 +1834,28 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       let playing = false;
       let interval = null;
       let greenTimers = [];
+      let greenDone = false;
       const isLastFrame = () => currentFrame === frames.length - 1;
 
       function renderFrame(idx) {
+        const newFrame = Math.max(0, Math.min(idx, frames.length - 1));
+        const willBeLast = newFrame === frames.length - 1;
+
+        // Already showing the completed sorted state — don't restart the sweep
+        if (willBeLast && greenDone) return;
+
+        // Navigating away from last frame — allow sweep to re-run next time
+        if (!willBeLast) greenDone = false;
+
         greenTimers.forEach(t => clearTimeout(t));
         greenTimers = [];
 
-        currentFrame = Math.max(0, Math.min(idx, frames.length - 1));
+        currentFrame = newFrame;
         const frame = frames[currentFrame];
         const row = frame.rows[0] || { values: [], compare: new Set(), swap: new Set() };
         frameInfo.textContent = `${currentFrame + 1} / ${frames.length}`;
         labelEl.textContent = frame.label || '';
 
-        const lastFrame = isLastFrame();
         const hasAnnotations = row.compare.size > 0 || row.swap.size > 0;
 
         for (let i = 0; i < barCount; i++) {
@@ -1865,7 +1874,8 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
           }
         }
 
-        if (lastFrame && !hasAnnotations) {
+        if (willBeLast && !hasAnnotations) {
+          greenDone = true;
           const step = Math.min(40, Math.round(500 / barCount));
           for (let i = 0; i < barCount; i++) {
             if (bars[i].style.display !== 'none') {
