@@ -193,6 +193,7 @@
       font-family: 'SFMono-Regular', 'Cascadia Code', 'Consolas', 'Liberation Mono', monospace;
       font-size: 14px;
       line-height: 1.65;
+      white-space: pre;
       color: var(--text-muted);
       background: var(--bg);
       border-right: 1px solid var(--border);
@@ -807,12 +808,16 @@ Everything you type is compressed and encoded into the URL fragment (the part af
 
     // ── Line numbers ────────────────────────────────────────────────────────
     const lineNums = document.getElementById('lineNums');
+    let prevLineCount = 0;
     function updateLineNums() {
       const count = editor.value.split('\n').length;
+      if (count === prevLineCount) return;
+      prevLineCount = count;
       const nums = [];
       for (let i = 1; i <= count; i++) nums.push(i);
       lineNums.textContent = nums.join('\n');
     }
+    editor.addEventListener('input', updateLineNums);
     editor.addEventListener('scroll', () => { lineNums.scrollTop = editor.scrollTop; });
 
     // ── Render ───────────────────────────────────────────────────────────────
