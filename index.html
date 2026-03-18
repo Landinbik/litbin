@@ -876,10 +876,12 @@ SELECT 'hello from SQL' AS message;
 
     // ── Init from URL ────────────────────────────────────────────────────────
     (async () => {
-      const hash = location.hash.slice(1);
+      const raw  = location.hash.slice(1);
+      let   hash = raw;
+      try { hash = decodeURIComponent(raw); } catch(e) {}
       try { editor.value = hash ? await decode(hash) : DEFAULT; } catch(e) { editor.value = DEFAULT; }
       render();
-      try { updateSize(hash ? hash : await encode(editor.value)); } catch(e) {}
+      try { updateSize(raw ? hash : await encode(editor.value)); } catch(e) {}
     })();
 
     // ── Live update ──────────────────────────────────────────────────────────
