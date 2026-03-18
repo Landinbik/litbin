@@ -413,202 +413,54 @@
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
   <script>
-    const DEFAULT = `# Merge Sort — Literate Programming
+    const DEFAULT = `# litbin
 
-Merge sort is a classic divide-and-conquer algorithm. It recursively splits an array in half, sorts each half, then merges the sorted halves back together.
+A literate markdown pastebin. No accounts, no databases, no backend. **Your entire document is stored in the URL** — share the link, share the content.
 
-**Time complexity:** $O(n \\log n)$ in all cases — **Space complexity:** $O(n)$ auxiliary
-
-The recurrence is $T(n) = 2T(n/2) + O(n)$, which by the Master Theorem gives $T(n) = O(n \\log n)$.
+Write about a leetcode problem. Sketch an algorithm. Jot down an idea. Draft a short explanation. Hit **Share** and send the link.
 
 ---
 
-## Call graph
+## What you can do
+
+**Math** — inline $O(n \\log n)$ or display blocks:
+
+$$\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$$
+
+**Diagrams** — mermaid blocks render automatically:
 
 \`\`\`mermaid
-graph TD
-    A[mergesort arr] -->|split| B[mergesort left]
-    A -->|split| C[mergesort right]
-    B --> D[merge]
-    C --> D
-    D --> E[sorted array]
+graph LR
+    A[Write markdown] --> B[URL updates live]
+    B --> C[Share the link]
+    C --> D[They see your content]
 \`\`\`
 
----
-
-## The algorithm
-
-\`\`\`
-mergesort(arr):
-  if len(arr) <= 1: return arr
-  left  = mergesort(arr[:mid])
-  right = mergesort(arr[mid:])
-  return merge(left, right)
-
-merge(left, right):
-  while both non-empty: pick the smaller head
-  append remainder
-\`\`\`
-
----
-
-## Python
-
-List slicing makes the split natural. The merge builds a new list picking the smaller head from each half.
+**Runnable code** — hit ▶ Run to execute via Wandbox:
 
 \`\`\`python
-def merge_sort(arr):
-    if len(arr) <= 1:
-        return arr
-    mid = len(arr) // 2
-    left  = merge_sort(arr[:mid])
-    right = merge_sort(arr[mid:])
-    return merge(left, right)
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
 
-def merge(left, right):
-    result = []
-    i = j = 0
-    while i < len(left) and j < len(right):
-        if left[i] <= right[j]:
-            result.append(left[i]); i += 1
-        else:
-            result.append(right[j]); j += 1
-    return result + left[i:] + right[j:]
-
-print(merge_sort([38, 27, 43, 3, 9, 82, 10]))
+print([fib(i) for i in range(10)])
 \`\`\`
 
 ---
 
-## Common Lisp
+## How it works
 
-In Lisp we work with lists naturally. \`merge-sort\` splits by index, then merges by comparing heads recursively.
+Everything you type is compressed and encoded into the URL fragment (the part after \`#\`). The fragment never leaves your browser — no server ever sees your content.
 
-\`\`\`lisp
-(defun merge-lists (a b)
-  (cond ((null a) b)
-        ((null b) a)
-        ((<= (car a) (car b))
-         (cons (car a) (merge-lists (cdr a) b)))
-        (t
-         (cons (car b) (merge-lists a (cdr b))))))
+**Size limits:** A few hundred KB of markdown fits comfortably in a URL. That's enough for any note, explanation, or code snippet you'd reasonably want to share. The status bar shows URL size as you type.
 
-(defun merge-sort (lst)
-  (let ((n (length lst)))
-    (if (<= n 1) lst
-        (let* ((mid   (floor n 2))
-               (left  (subseq lst 0 mid))
-               (right (subseq lst mid)))
-          (merge-lists (merge-sort left) (merge-sort right))))))
-
-(print (merge-sort '(38 27 43 3 9 82 10)))
-\`\`\`
+**Short URLs:** For cleaner links, hit **Short URL** to get an is.gd shortlink.
 
 ---
 
-## Rust
-
-Rust's ownership system means we clone when splitting. The merge uses \`VecDeque\` for efficient front-popping.
-
-\`\`\`rust
-use std::collections::VecDeque;
-
-fn merge_sort(arr: Vec<i32>) -> Vec<i32> {
-    if arr.len() <= 1 { return arr; }
-    let mid   = arr.len() / 2;
-    let left  = merge_sort(arr[..mid].to_vec());
-    let right = merge_sort(arr[mid..].to_vec());
-    merge(left, right)
-}
-
-fn merge(left: Vec<i32>, right: Vec<i32>) -> Vec<i32> {
-    let mut l = VecDeque::from(left);
-    let mut r = VecDeque::from(right);
-    let mut result = Vec::new();
-    while !l.is_empty() && !r.is_empty() {
-        if l[0] <= r[0] { result.push(l.pop_front().unwrap()); }
-        else             { result.push(r.pop_front().unwrap()); }
-    }
-    result.extend(l);
-    result.extend(r);
-    result
-}
-
-fn main() {
-    println!("{:?}", merge_sort(vec![38, 27, 43, 3, 9, 82, 10]));
-}
-\`\`\`
-
----
-
-## C++
-
-\`std::inplace_merge\` from \`<algorithm>\` handles the merge step, keeping the implementation concise.
-
-\`\`\`cpp
-#include <iostream>
-#include <vector>
-#include <algorithm>
-
-void merge_sort(std::vector<int>& arr, int lo, int hi) {
-    if (hi - lo <= 1) return;
-    int mid = lo + (hi - lo) / 2;
-    merge_sort(arr, lo, mid);
-    merge_sort(arr, mid, hi);
-    std::inplace_merge(arr.begin() + lo, arr.begin() + mid, arr.begin() + hi);
-}
-
-int main() {
-    std::vector<int> arr = {38, 27, 43, 3, 9, 82, 10};
-    merge_sort(arr, 0, arr.size());
-    for (int x : arr) std::cout << x << " ";
-    std::cout << std::endl;
-}
-\`\`\`
-
----
-
-## C
-
-In C we work with raw arrays and indices, allocating a temporary buffer for each merge.
-
-\`\`\`c
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-void merge(int *arr, int lo, int mid, int hi) {
-    int n = hi - lo;
-    int *tmp = malloc(n * sizeof(int));
-    int i = lo, j = mid, k = 0;
-    while (i < mid && j < hi)
-        tmp[k++] = arr[i] <= arr[j] ? arr[i++] : arr[j++];
-    while (i < mid) tmp[k++] = arr[i++];
-    while (j < hi)  tmp[k++] = arr[j++];
-    memcpy(arr + lo, tmp, n * sizeof(int));
-    free(tmp);
-}
-
-void merge_sort(int *arr, int lo, int hi) {
-    if (hi - lo <= 1) return;
-    int mid = lo + (hi - lo) / 2;
-    merge_sort(arr, lo, mid);
-    merge_sort(arr, mid, hi);
-    merge(arr, lo, mid, hi);
-}
-
-int main() {
-    int arr[] = {38, 27, 43, 3, 9, 82, 10};
-    int n = sizeof(arr) / sizeof(arr[0]);
-    merge_sort(arr, 0, n);
-    for (int i = 0; i < n; i++) printf("%d ", arr[i]);
-    printf("\\n");
-}
-\`\`\`
-
----
-
-*All code runs via [Wandbox](https://wandbox.org). Hit **▶ Run** on any block to execute it.*
+*Start typing on the left. The preview updates as you write.*
 `;
 
     const editor   = document.getElementById('editor');
