@@ -2095,6 +2095,44 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         openCommandPalette();
         return;
       }
+      // Bold (Ctrl+B / Cmd+B)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        const selected = editor.value.substring(start, end);
+        if (selected) {
+          const before = editor.value.substring(0, start);
+          const after = editor.value.substring(end);
+          editor.value = before + '**' + selected + '**' + after;
+          editor.selectionStart = start;
+          editor.selectionEnd = end + 4;
+        } else {
+          editor.value = editor.value.substring(0, start) + '****' + editor.value.substring(start);
+          editor.selectionStart = editor.selectionEnd = start + 2;
+        }
+        editor.dispatchEvent(new Event('input'));
+        return;
+      }
+      // Italic (Ctrl+I / Cmd+I)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        const selected = editor.value.substring(start, end);
+        if (selected) {
+          const before = editor.value.substring(0, start);
+          const after = editor.value.substring(end);
+          editor.value = before + '*' + selected + '*' + after;
+          editor.selectionStart = start;
+          editor.selectionEnd = end + 2;
+        } else {
+          editor.value = editor.value.substring(0, start) + '**' + editor.value.substring(start);
+          editor.selectionStart = editor.selectionEnd = start + 1;
+        }
+        editor.dispatchEvent(new Event('input'));
+        return;
+      }
       handleListKeys(editor, e);
     });
 
