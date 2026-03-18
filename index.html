@@ -676,7 +676,7 @@ A literate markdown pastebin. No accounts, no databases, no backend. **Your enti
 Use \`sort:lang\` as the fence tag to animate sorting algorithms. Define your dataset once in a \`data\` block — inject it into every implementation with \`{varname}\` in the fence tag:
 
 \`\`\`data
-arr = [8, 3, 12, 1, 9, 5, 15, 2, 7, 10]
+arr = random(12, 1, 20)
 \`\`\`
 
 \`\`\`sort:python {arr}
@@ -935,14 +935,20 @@ Everything you type is compressed and encoded into the URL fragment (the part af
           const rows = code.split('\n').map(line => {
             const lm = line.match(/^\s*([\w$]+)\s*=\s*(.+?)\s*$/);
             if (!lm) return '';
+            const rawVal = lm[2].trim();
             let type = 'string';
-            try {
-              const v = JSON.parse(lm[2]);
-              if (Array.isArray(v)) type = 'array[' + v.length + ']';
-              else if (typeof v === 'number') type = Number.isInteger(v) ? 'int' : 'float';
-              else if (typeof v === 'boolean') type = 'bool';
-            } catch(e) {}
-            return `<tr><td>${lm[1]}</td><td>${type}</td><td>${lm[2]}</td></tr>`;
+            const rm = rawVal.match(/^random\(\s*(\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*\)/);
+            if (rm) {
+              type = `random[${rm[1]}]`;
+            } else {
+              try {
+                const v = JSON.parse(rawVal);
+                if (Array.isArray(v)) type = 'array[' + v.length + ']';
+                else if (typeof v === 'number') type = Number.isInteger(v) ? 'int' : 'float';
+                else if (typeof v === 'boolean') type = 'bool';
+              } catch(e) {}
+            }
+            return `<tr><td>${lm[1]}</td><td>${type}</td><td>${rawVal}</td></tr>`;
           }).filter(Boolean).join('');
           return `<div class="lit-data-block"><div class="lit-data-label">data</div><table class="lit-data-table">${rows}</table></div>`;
         }
@@ -1254,6 +1260,8 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
         m[1].split('\n').forEach(line => {
           const lm = line.match(/^\s*([\w$]+)\s*=\s*(.+?)\s*$/);
           if (!lm) return;
+          const rm = lm[2].trim().match(/^random\(\s*(\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/);
+          if (rm) { vars[lm[1]] = { _litRandom: true, n: +rm[1], min: +rm[2], max: +rm[3] }; return; }
           try { vars[lm[1]] = JSON.parse(lm[2]); }
           catch(e) { vars[lm[1]] = lm[2]; }
         });
@@ -1261,7 +1269,30 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
       return vars;
     }
 
+    function serializeRandom(name, n, min, max, lang) {
+      const l = lang.toLowerCase();
+      const range = max - min + 1;
+      if (['python','python3','py'].includes(l))
+        return `import random\n${name} = [random.randint(${min}, ${max}) for _ in range(${n})]`;
+      if (['javascript','js'].includes(l))
+        return `const ${name} = Array.from({length:${n}},()=>Math.floor(Math.random()*${range})+${min});`;
+      if (['typescript','ts'].includes(l))
+        return `const ${name}: number[] = Array.from({length:${n}},()=>Math.floor(Math.random()*${range})+${min});`;
+      if (['ruby','rb'].includes(l))
+        return `${name} = Array.new(${n}){rand(${min}..${max})}`;
+      if (['cpp','c++','cxx'].includes(l))
+        return `#include<random>\n#include<algorithm>\nstd::mt19937 _rng(std::random_device{}());\nstd::uniform_int_distribution<int> _dist(${min},${max});\nstd::vector<int> ${name}(${n});\nstd::generate(${name}.begin(),${name}.end(),[&]{return _dist(_rng);});`;
+      if (['rust','rs'].includes(l)) {
+        // stdlib-only LCG seeded from system time (no rand crate needed)
+        return `let _t:u64=std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(42,|d|d.subsec_nanos()as u64);\nlet mut _s=_t|1;\nlet mut ${name}:Vec<i64>=(0..${n}).map(|_|{_s=_s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);((_s>>33)%${range}u64)as i64+${min}}).collect();`;
+      }
+      if (['lisp','common-lisp','commonlisp'].includes(l))
+        return `(defvar ${name} (coerce (loop repeat ${n} collect (+ ${min} (random ${range}))) 'vector))`;
+      return `// ${name} = random(${n}, ${min}, ${max})`;
+    }
+
     function serializeLitVar(name, value, lang) {
+      if (value && value._litRandom) return serializeRandom(name, value.n, value.min, value.max, lang);
       const l = lang.toLowerCase();
       const isArr = Array.isArray(value);
       const allInt = isArr && value.every(v => Number.isInteger(v));
