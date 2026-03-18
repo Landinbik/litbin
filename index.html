@@ -2003,14 +2003,47 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       el.dispatchEvent(new Event('input'));
     }
 
+    // Command palette state
+    let _cmdSelected = 0;
+    let _cmdFiltered = [...COMMANDS];
+
+    function fuzzyScore(query, target) {
+      if (!query) return 1;
+      query = query.toLowerCase();
+      target = target.toLowerCase();
+      let score = 0;
+      let queryIdx = 0;
+      for (let i = 0; i < target.length && queryIdx < query.length; i++) {
+        if (target[i] === query[queryIdx]) {
+          score += Math.pow(0.9, i - queryIdx);
+          queryIdx++;
+        }
+      }
+      return queryIdx === query.length ? score : 0;
+    }
+
+    function filterAndSortCommands(query) {
+      const scored = COMMANDS.map(cmd => ({
+        cmd,
+        score: fuzzyScore(query, cmd.name)
+      }))
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+      _cmdFiltered = scored.map(x => x.cmd);
+      _cmdSelected = 0;
+      return _cmdFiltered;
+    }
+
     function openCommandPalette() {
       const cmdOverlay = document.getElementById('cmdOverlay');
       const cmdInput = document.getElementById('cmdInput');
-      const cmdList = document.getElementById('cmdList');
 
       cmdOverlay.classList.add('open');
       cmdInput.value = '';
-      renderCommandList(COMMANDS);
+      _cmdFiltered = [...COMMANDS];
+      _cmdSelected = 0;
+      renderCommandList(_cmdFiltered, 0);
       cmdInput.focus();
     }
 
@@ -2020,16 +2053,22 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       editor.focus();
     }
 
-    function renderCommandList(commands) {
+    function renderCommandList(commands, selectedIdx = 0) {
       const cmdList = document.getElementById('cmdList');
       cmdList.innerHTML = '';
-      commands.forEach(cmd => {
+      commands.forEach((cmd, idx) => {
         const item = document.createElement('li');
-        item.className = 'cmd-item';
+        item.className = 'cmd-item' + (idx === selectedIdx ? ' selected' : '');
         item.textContent = cmd.name;
         item.addEventListener('click', cmd.action);
         cmdList.appendChild(item);
       });
+    }
+
+    function executeSelectedCommand() {
+      if (_cmdSelected < _cmdFiltered.length) {
+        _cmdFiltered[_cmdSelected].action();
+      }
     }
 
     // ── Editor keydown ──────────────────────────────────────────────────────
@@ -2044,10 +2083,27 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     });
 
     // ── Command palette input ────────────────────────────────────────────────
-    document.getElementById('cmdInput').addEventListener('keydown', e => {
-      const cmdOverlay = document.getElementById('cmdOverlay');
+    const cmdInput = document.getElementById('cmdInput');
+
+    cmdInput.addEventListener('input', e => {
+      const filtered = filterAndSortCommands(e.target.value);
+      renderCommandList(filtered, _cmdSelected);
+    });
+
+    cmdInput.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         closeCommandPalette();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        _cmdSelected = Math.min(_cmdSelected + 1, _cmdFiltered.length - 1);
+        renderCommandList(_cmdFiltered, _cmdSelected);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        _cmdSelected = Math.max(_cmdSelected - 1, 0);
+        renderCommandList(_cmdFiltered, _cmdSelected);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        executeSelectedCommand();
       }
     });
 
