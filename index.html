@@ -687,15 +687,16 @@ Everything you type is compressed and encoded into the URL fragment (the part af
 <html><head><meta charset="UTF-8">
 <link rel="stylesheet" href="https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/dev/index.css">
 <script type="importmap">
-{"imports":{"react":"https://esm.sh/react@19.0.0","react-dom":"https://esm.sh/react-dom@19.0.0","react-dom/client":"https://esm.sh/react-dom@19.0.0/client"}}
+{"imports":{"react":"https://esm.sh/react@18","react-dom":"https://esm.sh/react-dom@18","react-dom/client":"https://esm.sh/react-dom@18/client","react/jsx-runtime":"https://esm.sh/react@18/jsx-runtime"}}
 ${CLOSE_SCRIPT}
-<style>*{box-sizing:border-box;margin:0;padding:0}html,body,#root{height:100%}</style>
-</head><body><div id="root"></div>
+<style>*{box-sizing:border-box;margin:0;padding:0}html,body,#root{height:100%}
+#err{display:flex;align-items:center;justify-content:center;height:100%;color:#f85149;font-size:13px;padding:16px;font-family:sans-serif}</style>
+</head><body><div id="root"><div id="err" style="display:none"></div></div>
 <script type="module">
+window.onerror=(msg)=>{const e=document.getElementById('err');e.textContent='Excalidraw failed: '+msg;e.style.display='flex';};
 import React from"react";
 import{createRoot}from"react-dom/client";
-import*as X from"https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/dev/index.js?external=react,react-dom";
-const{Excalidraw}=X;
+import{Excalidraw}from"https://esm.sh/@excalidraw/excalidraw@0.18.0?external=react,react-dom,react/jsx-runtime";
 const initialData=${dataJson};
 let t;
 function post(els,as){clearTimeout(t);t=setTimeout(()=>parent.postMessage({type:'excalidraw-update',id:${id},elements:Array.from(els),appState:{viewBackgroundColor:as.viewBackgroundColor,theme:as.theme}},'*'),600);}
