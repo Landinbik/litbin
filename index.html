@@ -17,8 +17,13 @@
       --text: #1f2328;
       --text-muted: #656d76;
       --accent: #0969da;
-      --header-bg: #1f2328;
-      --header-text: #f0f6fc;
+      --header-bg: #f6f8fa;
+      --header-text: #1f2328;
+      --header-muted: rgba(0,0,0,0.35);
+      --header-btn-border: rgba(0,0,0,0.15);
+      --output-bg: #f6f8fa;
+      --output-text: #1f2328;
+      --text-on-accent: #fff;
     }
     [data-theme="dark"] {
       --bg: #0d1117;
@@ -29,6 +34,11 @@
       --accent: #58a6ff;
       --header-bg: #161b22;
       --header-text: #e6edf3;
+      --header-muted: rgba(255,255,255,0.4);
+      --header-btn-border: rgba(255,255,255,0.18);
+      --output-bg: #0d1117;
+      --output-text: #c9d1d9;
+      --text-on-accent: #fff;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -65,14 +75,14 @@
     #urlSize {
       font-size: 11px;
       font-variant-numeric: tabular-nums;
-      color: rgba(255,255,255,0.4);
+      color: var(--header-muted);
     }
     #urlSize.warn  { color: #e3b341; }
     #urlSize.over  { color: #f85149; }
     #wordCount {
       font-size: 11px;
       font-variant-numeric: tabular-nums;
-      color: rgba(255,255,255,0.4);
+      color: var(--header-muted);
       display: none;
     }
 
@@ -107,7 +117,7 @@
     .btn {
       padding: 5px 13px;
       border-radius: 6px;
-      border: 1px solid rgba(255,255,255,0.18);
+      border: 1px solid var(--header-btn-border);
       background: transparent;
       color: var(--header-text);
       font-size: 13px;
@@ -115,11 +125,11 @@
       cursor: pointer;
       white-space: nowrap;
     }
-    .btn:hover { background: rgba(255,255,255,0.1); }
+    .btn:hover { background: var(--header-btn-border); }
     .btn.primary {
       background: var(--accent);
       border-color: transparent;
-      color: #fff;
+      color: var(--text-on-accent);
     }
     .btn.primary:hover { filter: brightness(1.1); }
 
@@ -348,9 +358,25 @@
       margin: 0 auto;
       padding: 40px 28px 160px 40px;
       width: 95%;
+      position: relative;
     }
     #liveContent.has-viz-inline {
       max-width: none;
+    }
+    .live-resize-handle {
+      position: fixed;
+      top: 48px;
+      bottom: 0;
+      width: 14px;
+      cursor: col-resize;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .live-resize-handle:hover, .live-resize-handle.dragging {
+      opacity: 1;
+      background: var(--accent);
+      border-radius: 3px;
     }
     /* ── Command palette ── */
     .cmd-palette-overlay {
@@ -434,7 +460,7 @@
     #frReplace { border-bottom: none; }
     .fr-controls { display: flex; gap: 6px; padding: 8px 14px; }
     .fr-btn { padding: 5px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 12px; cursor: pointer; }
-    .fr-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .fr-btn:hover { background: var(--accent); color: var(--text-on-accent); border-color: var(--accent); }
     .fr-status { font-size: 11px; color: var(--text-muted); padding: 0 14px; }
 
     /* ── Shortcuts modal ── */
@@ -547,7 +573,7 @@
       right: 8px;
       padding: 3px 11px;
       background: var(--accent);
-      color: #fff;
+      color: var(--text-on-accent);
       border: none;
       border-radius: 4px;
       font-size: 11px;
@@ -565,8 +591,8 @@
       font-family: 'SFMono-Regular', 'Cascadia Code', 'Consolas', monospace;
       font-size: 13px;
       line-height: 1.55;
-      background: #0d1117;
-      color: #c9d1d9;
+      background: var(--output-bg);
+      color: var(--output-text);
       border: 1px solid var(--border);
       border-top: none;
       border-radius: 0 0 6px 6px;
@@ -576,14 +602,14 @@
     }
     .code-output.visible { display: block; }
     .code-output .out-err  { color: #f85149; }
-    .code-output .out-meta { color: #6e7681; font-style: italic; font-size: 12px; }
+    .code-output .out-meta { color: var(--text-muted); font-style: italic; font-size: 12px; }
 
     /* ── Sort visualizer ── */
     .sort-viz { border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; background: var(--surface); padding: 12px 16px; }
     .sort-viz-controls { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
     .sort-viz-controls button { padding: 3px 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 4px; font-size: 12px; cursor: pointer; font-family: inherit; }
     .sort-viz-controls button:hover { background: var(--surface); }
-    .sort-viz-controls button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .sort-viz-controls button.active { background: var(--accent); color: var(--text-on-accent); border-color: var(--accent); }
     .sort-viz-controls input[type=range] { width: 60px; }
     .sort-viz-label { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 4px; min-height: 16px; }
     .sort-viz-row { display: flex; align-items: flex-end; gap: 1px; height: 140px; padding-bottom: 18px; position: relative; }
@@ -605,7 +631,7 @@
     .master-viz-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin-right: 2px; white-space: nowrap; }
     .master-viz-ctrl button { padding: 3px 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 4px; font-size: 12px; cursor: pointer; font-family: inherit; }
     .master-viz-ctrl button:hover { background: var(--surface); }
-    .master-viz-ctrl button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .master-viz-ctrl button.active { background: var(--accent); color: var(--text-on-accent); border-color: var(--accent); }
     .master-viz-ctrl input[type=range] { width: 70px; }
 
     /* ── Lit data blocks ── */
@@ -632,17 +658,6 @@
     .docs-body { overflow-y:auto; padding:20px 24px; }
     .docs-body .md-body h2 { margin-top:1.4em; }
     .docs-body .md-body table { width:100%; }
-
-    /* ── Command Palette ── */
-    .cmd-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:center; justify-content:flex-start; flex-direction:column; padding-top:20vh; }
-    .cmd-overlay.open { display:flex; }
-    .cmd-box { background:var(--bg); border:1px solid var(--border); border-radius:8px; width:min(400px,94vw); box-shadow:0 8px 24px rgba(0,0,0,0.2); display:flex; flex-direction:column; max-height:60vh; }
-    .cmd-input { padding:12px 16px; border:none; border-bottom:1px solid var(--border); font-size:14px; background:var(--bg); color:var(--text); outline:none; font-family:inherit; }
-    .cmd-input::placeholder { color:var(--text-muted); }
-    .cmd-list { overflow-y:auto; list-style:none; padding:4px 0; margin:0; }
-    .cmd-item { padding:10px 16px; cursor:pointer; border:none; background:transparent; color:var(--text); font-size:14px; width:100%; text-align:left; }
-    .cmd-item:hover { background:var(--surface); }
-    .cmd-item.selected { background:var(--accent); color:white; }
 
     /* ── Slides mode ── */
     .slides-overlay { display:none; position:fixed; inset:0; background:var(--bg); z-index:2000; flex-direction:column; }
@@ -736,7 +751,7 @@
       </div>
     </div>
     <button class="btn" id="foldBtn" style="display:none" title="Fold/unfold Excalidraw blocks">Fold ◆</button>
-    <button class="btn" id="modeBtn">Live</button>
+    <button class="btn" id="modeBtn">Live Editor</button>
     <button class="btn" id="themeBtn">Dark</button>
     <button class="btn" id="importBtn">Import</button>
     <button class="btn" id="exportBtn">Export</button>
@@ -805,13 +820,6 @@
       <div class="docs-body">
         <div id="docsContent" class="md-body"></div>
       </div>
-    </div>
-  </div>
-
-  <div class="cmd-overlay" id="cmdOverlay">
-    <div class="cmd-box">
-      <input class="cmd-input" id="cmdInput" type="text" placeholder="Type a command... (Ctrl+K to close)">
-      <ul class="cmd-list" id="cmdList"></ul>
     </div>
   </div>
 
@@ -907,24 +915,16 @@ sort_print(numbers)
 
 
 \`\`\`sort:lisp {numbers}
-; Quicksort with median-of-three pivot
+; Quicksort
 (defun swap-el (a i j) (rotatef (aref a i) (aref a j)))
-(defun median-of-three (a lo hi)
-  (let ((mid (floor (+ lo hi) 2)))
-    (when (> (aref a lo) (aref a mid)) (swap-el a lo mid))
-    (when (> (aref a lo) (aref a hi))  (swap-el a lo hi))
-    (when (> (aref a mid) (aref a hi)) (swap-el a mid hi))
-    mid))
 (defun qs-partition (a lo hi)
-  (let* ((pi (median-of-three a lo hi)) (pv (aref a pi)))
-    (swap-el a pi (1- hi))
-    (let ((store lo))
-      (loop for i from lo below (1- hi) do
-        (when (< (aref a i) pv)
-          (sort-print a :compare (list i store))
-          (swap-el a i store)
-          (incf store)))
-      (swap-el a store (1- hi)) store)))
+  (let* ((pv (aref a hi)) (store lo))
+    (loop for i from lo below hi do
+      (when (< (aref a i) pv)
+        (sort-print a :compare (list i store))
+        (swap-el a i store)
+        (incf store)))
+    (swap-el a store hi) store))
 (defun quicksort (a lo hi)
   (when (< lo hi)
     (let ((p (qs-partition a lo hi)))
@@ -934,6 +934,47 @@ sort_print(numbers)
 (sort-print numbers)
 (quicksort numbers 0 (1- (length numbers)))
 (sort-print numbers)
+\`\`\`
+
+\`\`\`sort:cpp {numbers}
+// Timsort — insertion sort small runs, then merge up
+const int RUN=4;
+void insSort(std::vector<int>&a,int lo,int hi){
+  for(int i=lo+1;i<=hi;i++){
+    int key=a[i],j=i-1;
+    while(j>=lo&&a[j]>key){
+      sort_print(a,{j},{j+1});
+      a[j+1]=a[j]; j--;
+    }
+    a[j+1]=key;
+    sort_print(a,{},{i});
+  }
+}
+void merge(std::vector<int>&a,int lo,int mid,int hi){
+  std::vector<int>L(a.begin()+lo,a.begin()+mid+1);
+  std::vector<int>R(a.begin()+mid+1,a.begin()+hi+1);
+  int i=0,j=0,k=lo;
+  while(i<(int)L.size()&&j<(int)R.size()){
+    if(L[i]<=R[j])a[k]=L[i++]; else a[k]=R[j++];
+    sort_print(a,{k},{});
+    k++;
+  }
+  while(i<(int)L.size()){a[k]=L[i++];sort_print(a,{},{k});k++;}
+  while(j<(int)R.size()){a[k]=R[j++];sort_print(a,{},{k});k++;}
+}
+void timsort(std::vector<int>&a){
+  int n=a.size();
+  for(int i=0;i<n;i+=RUN)
+    insSort(a,i,std::min(i+RUN-1,n-1));
+  for(int sz=RUN;sz<n;sz*=2)
+    for(int lo=0;lo+sz<n;lo+=sz*2)
+      merge(a,lo,lo+sz-1,std::min(lo+sz*2-1,n-1));
+}
+int main(){
+  sort_print(numbers);
+  timsort(numbers);
+  sort_print(numbers);
+}
 \`\`\`
 
 ---
@@ -1011,18 +1052,6 @@ Click **Run all** to execute all code blocks simultaneously. Use **Master playba
 
 ---
 
-## 🎥 Multimedia
-
-Embed videos from YouTube, Vimeo, or direct video files. Just paste the URL on its own line:
-
-https://www.youtube.com/watch?v=dQw4w9WgXcQ
-
-Or use direct video files:
-
-https://commondatastorage.googleapis.com/gtv-videos-library/sample/Big_Buck_Bunny_1080_24fps_Normal.mp4
-
----
-
 ## ✏️ Editing Features
 
 - **Live mode** — Obsidian-style block editing. Click a rendered block to edit it inline. Arrow keys navigate, Enter/Tab indent lists.
@@ -1069,6 +1098,15 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
     const editorPane  = document.getElementById('editorPane');
     const previewPane = document.getElementById('previewPane');
     const foldBtn     = document.getElementById('foldBtn');
+
+    // ── Constants ─────────────────────────────────────────────────────────────
+    const WORDS_PER_MIN        = 180;
+    const URL_WARN_KB          = 500;
+    const URL_ERROR_KB         = 1500;
+    const URL_DEBOUNCE_MS      = 400;
+    const EXCALIDRAW_DEBOUNCE_MS = 600;
+    const OUTPUT_CACHE_MAX     = 100;
+    const GREEN_SWEEP_MS       = 500;
 
     // ── Viewer mode ──────────────────────────────────────────────────────────
     let viewerMode = new URLSearchParams(location.search).has('view');
@@ -1363,7 +1401,7 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
     function pruneExcalidrawCache(newCount) {
       for (const [id, entry] of _excalidrawWrapCache) {
         if (id >= newCount) {
-          if (entry.root) try { entry.root.unmount(); } catch(e) {}
+          if (entry.root) try { entry.root.unmount(); } catch(e) { console.warn('Excalidraw unmount:', e); }
           _excalidrawWrapCache.delete(id);
         }
       }
@@ -1402,14 +1440,16 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
         if (updated === editor.value) return;
         editor.value = updated;
       }
-      clearTimeout(urlDebounce);
-      urlDebounce = setTimeout(async () => {
-        try {
-          const encoded = await encode(getEditorContent());
-          setHash(encoded);
-          updateSize(encoded);
-        } catch(e) {}
-      }, 400);
+      if (!_showingDefault) {
+        clearTimeout(urlDebounce);
+        urlDebounce = setTimeout(async () => {
+          try {
+            const encoded = await encode(getEditorContent());
+            setHash(encoded);
+            updateSize(encoded);
+          } catch(e) {}
+        }, URL_DEBOUNCE_MS);
+      }
     }
 
     function renderExcalidraw(container) {
@@ -1443,7 +1483,7 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
           let t;
           function onChange(els, as) {
             clearTimeout(t);
-            t = setTimeout(() => saveExcalidrawBack(myId, els, as), 600);
+            t = setTimeout(() => saveExcalidrawBack(myId, els, as), EXCALIDRAW_DEBOUNCE_MS);
           }
           const root = createRoot(mountPoint);
           entry.root = root;
@@ -1528,11 +1568,11 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
 `,
       ruby: `def sort_print(a,compare:[],swap:[]);c,s=[compare].flatten.to_set,[swap].flatten.to_set;puts a.each_with_index.map{|v,i|s.include?(i)?"[#{v}]":c.include?(i)?"(#{v})":v.to_s}.join(' ');end
 `,
-      cpp: `#include<vector>
+      cpp: `#include<iostream>
+#include<vector>
 #include<set>
-#include<iostream>
-template<class T>void sort_print(const std::vector<T>&a,std::initializer_list<int>cmp={},std::initializer_list<int>swp={}){std::set<int>c(cmp),s(swp);for(int i=0;i<(int)a.size();i++){if(i)std::cout<<' ';if(s.count(i))std::cout<<'['<<a[i]<<']';else if(c.count(i))std::cout<<'('<<a[i]<<')';else std::cout<<a[i];}std::cout<<'\n';}
-`,
+#include<algorithm>
+inline void sort_print(const std::vector<int>&a,std::initializer_list<int>cmp={},std::initializer_list<int>swp={}){std::set<int>c(cmp),s(swp);for(size_t i=0;i<a.size();i++){if(i)std::cout<<" ";if(s.count(i))std::cout<<"["<<a[i]<<"]";else if(c.count(i))std::cout<<"("<<a[i]<<")";else std::cout<<a[i];}std::cout<<std::endl;}`,
       rust: `use std::collections::HashSet;
 fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:HashSet<_>=compare.iter().cloned().collect();let s:HashSet<_>=swap.iter().cloned().collect();let out:Vec<String>=a.iter().enumerate().map(|(i,v)|{if s.contains(&i){format!("[{}]",v)}else if c.contains(&i){format!("({})",v)}else{format!("{}",v)}}).collect();println!("{}",out.join(" "));}
 `,
@@ -1590,7 +1630,7 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
       if (['ruby','rb'].includes(l))
         return `${name} = Array.new(${n}){rand(${min}..${max})}`;
       if (['cpp','c++','cxx'].includes(l))
-        return `#include<random>\n#include<algorithm>\nstd::mt19937 _rng(std::random_device{}());\nstd::uniform_int_distribution<int> _dist(${min},${max});\nstd::vector<int> ${name}(${n});\nstd::generate(${name}.begin(),${name}.end(),[&]{return _dist(_rng);});`;
+        return `#include<random>\nstd::vector<int> ${name}=[]{std::mt19937 g(std::random_device{}());std::uniform_int_distribution<int> d(${min},${max});std::vector<int> v(${n});for(auto&x:v)x=d(g);return v;}();`;
       if (['rust','rs'].includes(l)) {
         // stdlib-only LCG seeded from system time (no rand crate needed)
         return `let _t:u64=std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(42,|d|d.subsec_nanos()as u64);\nlet mut _s=_t|1;\nlet mut ${name}:Vec<i64>=(0..${n}).map(|_|{_s=_s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);((_s>>33)%${range}u64)as i64+${min}}).collect();`;
@@ -1992,6 +2032,9 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
             await executeCode(lang, codeEl.textContent, outEl, btn, varRefs);
           }
           outputCache.set(cacheKey, { className: outEl.className, innerHTML: outEl.innerHTML });
+          if (outputCache.size > OUTPUT_CACHE_MAX) {
+            outputCache.delete(outputCache.keys().next().value);
+          }
         });
       });
     }
@@ -2179,7 +2222,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
 
         if (willBeLast && !hasAnnotations) {
           greenDone = true;
-          const step = Math.min(40, Math.round(500 / barCount));
+          const step = Math.min(40, Math.round(GREEN_SWEEP_MS / barCount));
           for (let i = 0; i < barCount; i++) {
             if (bars[i].style.display !== 'none') {
               greenTimers.push(setTimeout(() => bars[i].classList.add('sorted'), i * step));
@@ -2211,11 +2254,16 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       }
 
       playBtn.addEventListener('click', () => {
-        if (playing) pause();
-        else {
-          if (currentFrame >= frames.length - 1) renderFrame(0);
-          play();
+        if (playing) { pause(); return; }
+        if (currentFrame >= frames.length - 1) {
+          // Cancel any in-progress green sweep and force a clean reset
+          greenTimers.forEach(t => clearTimeout(t));
+          greenTimers = [];
+          greenDone = false;
+          bars.forEach(b => b.classList.remove('sorted'));
+          renderFrame(0);
         }
+        play();
       });
       prevBtn.addEventListener('click', () => { pause(); renderFrame(currentFrame - 1); });
       nextBtn.addEventListener('click', () => { pause(); renderFrame(currentFrame + 1); });
@@ -2242,6 +2290,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         el = el.parentElement;
       }
 
+      viz._cleanup = pause;
       return viz;
     }
 
@@ -2258,7 +2307,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
 
       // Remove any previous visualizer
       const oldViz = vizContainer.querySelector('.sort-viz');
-      if (oldViz) oldViz.remove();
+      if (oldViz) { oldViz._cleanup?.(); oldViz.remove(); }
 
       try {
         const res = await fetch('https://wandbox.org/api/compile.json', {
@@ -2520,7 +2569,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       if (!showWordCount.checked) { wordCountEl.style.display = 'none'; return; }
       const text = editor.value.trim();
       const words = text ? text.split(/\s+/).length : 0;
-      const mins = Math.max(1, Math.round(words / 180));
+      const mins = Math.max(1, Math.round(words / WORDS_PER_MIN));
       wordCountEl.textContent = words + ' words · ' + mins + ' min read';
       wordCountEl.style.display = 'inline';
     }
@@ -2529,18 +2578,18 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     function updateSize(encoded) {
       const kb = encoded.length / 1024;
       urlSize.textContent = kb < 1 ? encoded.length + ' B' : kb.toFixed(1) + ' KB';
-      urlSize.className = kb > 1500 ? 'over' : kb > 500 ? 'warn' : '';
+      urlSize.className = kb > URL_ERROR_KB ? 'over' : kb > URL_WARN_KB ? 'warn' : '';
     }
 
     // ── Init from URL ────────────────────────────────────────────────────────
+    let _showingDefault = false;
     (async () => {
       const hash = location.hash.slice(1);
-      let isDefault = false;
-      try { editor.value = hash ? await decode(hash) : DEFAULT; isDefault = !hash; } catch(e) { editor.value = DEFAULT; isDefault = true; }
+      try { editor.value = hash ? await decode(hash) : DEFAULT; _showingDefault = !hash; } catch(e) { editor.value = DEFAULT; _showingDefault = true; }
       updateFoldBtnVisibility();
       if (hasExcalidrawBlocks(editor.value)) foldDrawings();
       render();
-      if (!isDefault) { try { updateSize(hash); } catch(e) {} }
+      if (!_showingDefault) { try { updateSize(hash); } catch(e) {} }
       if (slidesAutoOpen) applySlidesMode();
     })();
 
@@ -2605,146 +2654,8 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       return false;
     }
 
-    // ── Command Palette ─────────────────────────────────────────────────────
-    const COMMANDS = [
-      {
-        name: 'Insert time',
-        action: () => {
-          const now = new Date();
-          let hours = now.getHours();
-          const minutes = String(now.getMinutes()).padStart(2, '0');
-          const period = hours >= 12 ? 'PM' : 'AM';
-          hours = hours % 12 || 12;
-          const timeStr = `${hours}:${minutes}${period}`;
-          insertAtCursor(editor, timeStr);
-          closeCommandPalette();
-        }
-      },
-      {
-        name: 'Insert date',
-        action: () => {
-          const now = new Date();
-          const year = now.getFullYear();
-          const month = String(now.getMonth() + 1).padStart(2, '0');
-          const day = String(now.getDate()).padStart(2, '0');
-          const dateStr = `${year}-${month}-${day}`;
-          insertAtCursor(editor, dateStr);
-          closeCommandPalette();
-        }
-      },
-      {
-        name: 'Insert code block',
-        action: () => {
-          const codeBlock = '```js\n\n```';
-          insertAtCursor(editor, codeBlock);
-          closeCommandPalette();
-        }
-      },
-      {
-        name: 'Insert mermaid',
-        action: () => {
-          const mermaid = '```mermaid\ngraph LR\n  A --> B\n```';
-          insertAtCursor(editor, mermaid);
-          closeCommandPalette();
-        }
-      },
-      {
-        name: 'Insert excalidraw',
-        action: () => {
-          const excalidraw = '```excalidraw\n{"elements":[],"appState":{"viewBackgroundColor":"#ffffff","theme":"light"}}\n```';
-          insertAtCursor(editor, excalidraw);
-          closeCommandPalette();
-        }
-      }
-    ];
-
-    function insertAtCursor(el, text) {
-      const start = el.selectionStart;
-      const end = el.selectionEnd;
-      const before = el.value.substring(0, start);
-      const after = el.value.substring(end);
-      el.value = before + text + after;
-      el.selectionStart = el.selectionEnd = start + text.length;
-      el.focus();
-      el.dispatchEvent(new Event('input'));
-    }
-
-    // Command palette state
-    let _cmdSelected = 0;
-    let _cmdFiltered = [...COMMANDS];
-
-    function fuzzyScore(query, target) {
-      if (!query) return 1;
-      query = query.toLowerCase();
-      target = target.toLowerCase();
-      let score = 0;
-      let queryIdx = 0;
-      for (let i = 0; i < target.length && queryIdx < query.length; i++) {
-        if (target[i] === query[queryIdx]) {
-          score += Math.pow(0.9, i - queryIdx);
-          queryIdx++;
-        }
-      }
-      return queryIdx === query.length ? score : 0;
-    }
-
-    function filterAndSortCommands(query) {
-      const scored = COMMANDS.map(cmd => ({
-        cmd,
-        score: fuzzyScore(query, cmd.name)
-      }))
-      .filter(x => x.score > 0)
-      .sort((a, b) => b.score - a.score);
-
-      _cmdFiltered = scored.map(x => x.cmd);
-      _cmdSelected = 0;
-      return _cmdFiltered;
-    }
-
-    function openCommandPalette() {
-      const cmdOverlay = document.getElementById('cmdOverlay');
-      const cmdInput = document.getElementById('cmdInput');
-
-      cmdOverlay.classList.add('open');
-      cmdInput.value = '';
-      _cmdFiltered = [...COMMANDS];
-      _cmdSelected = 0;
-      renderCommandList(_cmdFiltered, 0);
-      cmdInput.focus();
-    }
-
-    function closeCommandPalette() {
-      const cmdOverlay = document.getElementById('cmdOverlay');
-      cmdOverlay.classList.remove('open');
-      editor.focus();
-    }
-
-    function renderCommandList(commands, selectedIdx = 0) {
-      const cmdList = document.getElementById('cmdList');
-      cmdList.innerHTML = '';
-      commands.forEach((cmd, idx) => {
-        const item = document.createElement('li');
-        item.className = 'cmd-item' + (idx === selectedIdx ? ' selected' : '');
-        item.textContent = cmd.name;
-        item.addEventListener('click', cmd.action);
-        cmdList.appendChild(item);
-      });
-    }
-
-    function executeSelectedCommand() {
-      if (_cmdSelected < _cmdFiltered.length) {
-        _cmdFiltered[_cmdSelected].action();
-      }
-    }
-
     // ── Editor keydown ──────────────────────────────────────────────────────
     editor.addEventListener('keydown', e => {
-      // Command palette (Ctrl+K / Cmd+K)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        openCommandPalette();
-        return;
-      }
       // Bold (Ctrl+B / Cmd+B) - toggle
       if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
         e.preventDefault();
@@ -2811,41 +2722,10 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       handleListKeys(editor, e);
     });
 
-    // ── Command palette input ────────────────────────────────────────────────
-    const cmdInput = document.getElementById('cmdInput');
-
-    cmdInput.addEventListener('input', e => {
-      const filtered = filterAndSortCommands(e.target.value);
-      renderCommandList(filtered, _cmdSelected);
-    });
-
-    cmdInput.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
-        closeCommandPalette();
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        _cmdSelected = Math.min(_cmdSelected + 1, _cmdFiltered.length - 1);
-        renderCommandList(_cmdFiltered, _cmdSelected);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        _cmdSelected = Math.max(_cmdSelected - 1, 0);
-        renderCommandList(_cmdFiltered, _cmdSelected);
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        executeSelectedCommand();
-      }
-    });
-
-    // Close palette on click outside
-    document.getElementById('cmdOverlay').addEventListener('click', e => {
-      if (e.target.id === 'cmdOverlay') {
-        closeCommandPalette();
-      }
-    });
-
     // ── Live update ──────────────────────────────────────────────────────────
     let urlDebounce;
     editor.addEventListener('input', () => {
+      _showingDefault = false;
       updateFoldBtnVisibility();
       render();                               // immediate — never skip this
       clearTimeout(urlDebounce);
@@ -2855,7 +2735,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
           setHash(encoded);
           updateSize(encoded);
         } catch(e) { console.warn('URL sync failed:', e); }
-      }, 400);
+      }, URL_DEBOUNCE_MS);
     });
 
     // ── Share ────────────────────────────────────────────────────────────────
@@ -3270,7 +3150,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
           setHash(encoded);
           updateSize(encoded);
         } catch(e) {}
-      }, 400);
+      }, URL_DEBOUNCE_MS);
     }
 
     // ── Command palette ──────────────────────────────────────────────────────
@@ -3504,6 +3384,58 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     frReplaceAllBtn.addEventListener('click', replaceAll);
     frCloseEl.addEventListener('click', () => { frPanelEl.style.display = 'none'; frFindEl.value = ''; frMatches = []; });
 
+    // ── Live pane width resize handles ──────────────────────────────────────
+    let liveHandleObserver;
+    {
+      const liveResizeL = document.createElement('div');
+      const liveResizeR = document.createElement('div');
+      liveResizeL.className = 'live-resize-handle';
+      liveResizeR.className = 'live-resize-handle';
+      document.body.appendChild(liveResizeL);
+      document.body.appendChild(liveResizeR);
+
+      function positionHandles() {
+        if (!liveMode) { liveResizeL.style.display = liveResizeR.style.display = 'none'; return; }
+        liveResizeL.style.display = liveResizeR.style.display = '';
+        const r = liveContent.getBoundingClientRect();
+        liveResizeL.style.left = (r.left - 10) + 'px';
+        liveResizeR.style.left = (r.right + 4) + 'px';
+      }
+      liveHandleObserver = new MutationObserver(() => requestAnimationFrame(positionHandles));
+      liveHandleObserver.observe(livePane, { attributes: true, attributeFilter: ['style'] });
+      window.addEventListener('resize', positionHandles);
+      livePane.addEventListener('scroll', positionHandles);
+
+      let resizing = null;
+      function startResize(handle, e) {
+        e.preventDefault();
+        resizing = handle;
+        handle.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      }
+      liveResizeL.addEventListener('mousedown', e => startResize(liveResizeL, e));
+      liveResizeR.addEventListener('mousedown', e => startResize(liveResizeR, e));
+      document.addEventListener('mousemove', e => {
+        if (!resizing) return;
+        const paneRect = livePane.getBoundingClientRect();
+        const center = paneRect.left + paneRect.width / 2;
+        const dist = Math.abs(e.clientX - center) * 2;
+        const newWidth = Math.max(320, Math.min(dist, paneRect.width));
+        liveContent.style.maxWidth = newWidth + 'px';
+        positionHandles();
+      });
+      document.addEventListener('mouseup', () => {
+        if (!resizing) return;
+        resizing.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        resizing = null;
+      });
+      liveResizeL.addEventListener('dblclick', () => { liveContent.style.maxWidth = ''; positionHandles(); });
+      liveResizeR.addEventListener('dblclick', () => { liveContent.style.maxWidth = ''; positionHandles(); });
+    }
+
     // ── Global keydown for Ctrl+K and Ctrl+H ──────────────────────────────────
     document.addEventListener('keydown', e => {
       // Ctrl+K — command palette (live or split mode)
@@ -3536,6 +3468,9 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     // ─────────────────────────────────────────────────────────────────────────
 
     modeBtn.addEventListener('click', () => {
+      _showingDefault = false;
+      clearTimeout(urlDebounce);
+      clearTimeout(liveDebounce);
       liveMode = !liveMode;
       if (liveMode) {
         unfoldDrawings(); // live mode needs real content
@@ -3543,14 +3478,16 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         liveActiveIdx = null;
         mainEl.style.display   = 'none';
         livePane.style.display = 'flex';
-        modeBtn.textContent    = 'Split';
+        modeBtn.textContent    = 'Split Editor';
+        liveHandleObserver?.observe(livePane, { attributes: true, attributeFilter: ['style'] });
         renderLive();
       } else {
+        liveHandleObserver?.disconnect();
         editor.value           = joinSegs();
         render();
         livePane.style.display = 'none';
         mainEl.style.display   = 'flex';
-        modeBtn.textContent    = 'Live';
+        modeBtn.textContent    = 'Live Editor';
       }
     });
 

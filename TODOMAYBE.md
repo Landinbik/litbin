@@ -25,6 +25,12 @@ Ideas for future improvements. None are committed to.
 - ~~**PDF export**~~ — "PDF" button calls `window.print()`; `@media print` CSS hides everything except `#preview`; `@page` sets 1.5 cm margins
 - ~~**Viewer mode**~~ — "View" button / `?view` URL param hides editor and all controls except Theme; preview goes fullscreen; "Edit" button exits; shareable URL preserves `?view`
 - ~~**Slides mode**~~ — "Slides" button enters fullscreen presentation; split on `---`, navigate with arrow keys or buttons, Esc to exit
+- ~~**Keyboard shortcuts cheat sheet**~~ — Modal showing all keybindings
+- ~~**Find / replace**~~ — Ctrl+H floating panel in editor
+- ~~**Command palette**~~ — Ctrl+K / Cmd+K fuzzy-searchable command menu
+- ~~**Lit variable system**~~ — `data` blocks + `{varname}` injection + `random()` metafunction
+- ~~**Video / media embedding**~~ — bare YouTube/Vimeo URLs auto-embed as iframes; `.mp4/.webm/.ogv` URLs embed as `<video>`; handled in marked paragraph renderer
+- ~~**Live content-width resize handles**~~ — drag handles on left/right edges of `#liveContent` to adjust `max-width`; double-click resets to 760px; `position: fixed`, repositioned via `MutationObserver` on `livePane` style changes
 
 ---
 
@@ -35,14 +41,8 @@ Ideas for future improvements. None are committed to.
 ### PDF export customization — *Low*
 Obsidian-style print options panel before calling `window.print()`: paper size (A4, Letter, Legal — via `@page { size: ... }`), content scaling (zoom % applied to `#preview` before print), and margins (none / narrow / normal / wide). Small modal or popover that sets CSS vars / inline styles, then calls `window.print()`, then resets them.
 
-### Keyboard shortcuts cheat sheet — *Low*
-Modal or tooltip showing all keybindings (Tab, Shift+Tab, Enter in lists, Escape in live mode, etc.).
-
 ### Dynamic sort_print docs — *Low*
 In `openDocs()` (lazy render), replace the hardcoded implementations section of `DOCS_MD` with dynamically built HTML: iterate `Object.entries(SORT_PREAMBLES)` (skipping aliases), wrap each in a `<pre><code>` block with hljs highlighting. Removes ~80 lines of duplicated content from the `DOCS_MD` string. Single source of truth: editing a preamble auto-updates the docs.
-
-### Find / replace — *Low-Medium*
-Ctrl+H in the textarea. Simple floating panel.
 
 ### Mobile formatting toolbar — *Low-Medium*
 Floating buttons for bold, italic, code, link — mobile keyboards lack the special keys needed for markdown shortcuts.
@@ -58,12 +58,6 @@ Auto-generate from headings. Collapsible sidebar or injected at top of preview.
 
 ### PDF viewing mode (paper view) — *Low-Medium*
 CSS-only print-preview simulation. Toggle via "Paper" button — applies `.paper-view` class to preview. Each "page" is a fixed-height div with box-shadow border and margin between pages; `break-after: page` and fixed page dimensions. No PDF.js needed — purely visual. (True PDF.js + html2canvas pipeline would be **High** difficulty for low gain.)
-
-### Command palette — *Low-Medium*
-Keyboard-driven command menu (Ctrl+K / Cmd+K) with fuzzy search. Modal overlay with filterable command list: Insert code block, Insert table, Insert image, Insert heading, Bold, Italic, HR — each calls `insertAtCursor(editor, text)` at `selectionStart`. Dismiss on Esc/click-outside. Lightweight and searchable; scales as more commands are added. Pairs well with keyboard shortcuts cheat sheet and table improvements.
-
-### Slides mode — *Medium*
-"Slides" button enters fullscreen overlay view. Split `getEditorContent()` on `\n---\n` → array of slide markdown strings, render each through the full marked + KaTeX + Mermaid pipeline. Show one slide at a time; ← → arrow keys and on-screen buttons navigate. CSS: centered content, large font, slide counter, theme-aware background. Esc exits. (`---` already renders as `<hr>` in markdown — slides mode intercepts before marked.)
 
 ### Better tables (editor + live view) — *Medium*
 Tab in a table row jumps to next cell (detect `|` delimiters in current line — needs priority over existing tab=2-spaces handler). Enter in last cell appends a new row with matching column count. Context menu "Insert table" opens a grid picker (like Google Docs) to choose NxM dimensions. Live mode: table blocks get a structured cell editor instead of raw textarea. Optional: auto-align column widths on save.

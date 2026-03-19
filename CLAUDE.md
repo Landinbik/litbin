@@ -32,7 +32,7 @@ No Node.js, no npm, no build. Open `index.html` directly in a browser or serve w
 
 ## Architecture
 
-Everything lives in `index.html` (~2,300 lines):
+Everything lives in `index.html` (~3,550 lines):
 
 1. **CSS** — custom properties for light/dark theming, responsive split-pane layout, sort visualizer, docs modal
 2. **HTML** — header bar (buttons, settings, URL size), docs modal overlay, mobile tab bar, split `main` with editor pane + divider + preview pane, live mode pane
@@ -51,8 +51,8 @@ Everything lives in `index.html` (~2,300 lines):
 - **Short URL**: LinkShrink API (`POST linkshrink.dev/api/v1/shorten`), 1-year TTL
 - **URL size indicator**: color-coded (normal / yellow >500 KB / red >1.5 MB) in header
 - **Word count**: optional (settings toggle), shows words + reading time at 180 wpm
-- **Default content**: shown only when the hash is empty (new visit)
-- **Docs modal**: `?` button opens full feature reference rendered from `DOCS_MD` markdown constant
+- **Default content**: shown only when the hash is empty (new visit); `_showingDefault` flag prevents this content from being encoded into the URL hash — cleared on first edit or mode switch
+- **Docs modal**: `?` button opens full feature reference rendered from `DOCS_MD` markdown constant; includes keyboard shortcuts reference
 
 ## Editor features
 
@@ -60,6 +60,9 @@ Everything lives in `index.html` (~2,300 lines):
 - **List editing**: Obsidian-style — Enter continues lists, Tab/Shift+Tab indent/dedent, Enter on empty item exits list
 - **Tab capture**: Tab inserts 2 spaces in both editor and live mode textareas
 - **Excalidraw fold/unfold**: Collapses `excalidraw` blocks to `◆ N elements (folded)` placeholder; `getEditorContent()` always returns real (unfolded) content for URL encoding; **folds by default on load**
+- **Command palette**: Ctrl+K / Cmd+K — fuzzy-searchable command menu
+- **Find & Replace**: Ctrl+H — floating panel in editor
+- **Keyboard shortcuts cheat sheet**: modal showing all keybindings
 
 ## Live mode
 
@@ -72,6 +75,9 @@ Obsidian-style block editing. Markdown is segmented into blocks (separated by bl
 - Escape blurs the active textarea
 - Event delegation on `liveContent` for mousedown/click (avoids per-element listener leak)
 - Excalidraw blocks get an "Edit source" button overlay
+- Drag-reorderable blocks
+- Side-by-side code + sort visualizer layout
+- Content-width resize handles: fixed handles on left/right edges of `#liveContent`, drag to adjust `max-width`, double-click resets to 760px; positioned via `getBoundingClientRect()` and resynced via MutationObserver on `livePane` style changes
 - `syncFromLive()` uses its own `liveDebounce` timer (separate from editor's `urlDebounce`)
 
 ## Presentation mode (Slides)
@@ -94,6 +100,16 @@ Fullscreen slide deck view for presenting. Slides are split by `---` delimiters.
 
 ### Mermaid diagrams
 Fenced ` ```mermaid ``` ` blocks render as SVG. Theme-aware (light → default, dark → dark). Each diagram gets a unique ID (`mermaid-N`).
+
+### Video / media embedding
+
+Marked's paragraph renderer intercepts bare URLs and auto-embeds media:
+
+- **YouTube**: `youtube.com/watch?v=ID` or `youtu.be/ID` → responsive `<iframe>` embed
+- **Vimeo**: `vimeo.com/ID` → responsive `<iframe>` embed
+- **Direct video**: `.mp4`, `.webm`, `.ogv`, `.ogg` URLs → HTML5 `<video>` element
+- Aspect ratio maintained via 56.25% padding trick; styled as `.video-embed`
+- `loading="lazy"` on iframes
 
 ### Excalidraw whiteboards
 Fenced ` ```excalidraw ``` ` blocks render as interactive whiteboards.
@@ -135,6 +151,12 @@ Each language is declared in the `EXEC_LANGS` map:
 - `SORT_PREAMBLES` map injects a `sort_print(arr, compare=, swap=)` helper before user code for: Python, JS, TS, Ruby, C++, Rust, Lisp
 - hljs highlight loop skips `language-mermaid` and `language-excalidraw` to avoid unknown-language warnings
 - Homepage has examples: insertion sort (Python), merge sort (Python), quicksort with 1/3 pivot (Lisp, Rust)
+- Run all / Visualize all buttons in preview, slides, and live view
+- Master playback control that syncs all sort visualizers simultaneously
+
+### Lit variable system
+
+`data` fence blocks define variables (`name = value`, JSON-parsed). `{varname}` in a code block's info string injects the variable with language-specific serialization. `random(min, max, count)` metafunction generates arrays at runtime. Injection order: var injections → sort preamble → user code.
 
 ### Syntax highlighting
 
