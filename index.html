@@ -2535,11 +2535,12 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     // ── Init from URL ────────────────────────────────────────────────────────
     (async () => {
       const hash = location.hash.slice(1);
-      try { editor.value = hash ? await decode(hash) : DEFAULT; } catch(e) { editor.value = DEFAULT; }
+      let isDefault = false;
+      try { editor.value = hash ? await decode(hash) : DEFAULT; isDefault = !hash; } catch(e) { editor.value = DEFAULT; isDefault = true; }
       updateFoldBtnVisibility();
       if (hasExcalidrawBlocks(editor.value)) foldDrawings();
       render();
-      try { updateSize(hash ? hash : await encode(getEditorContent())); } catch(e) {}
+      if (!isDefault) { try { updateSize(hash); } catch(e) {} }
       if (slidesAutoOpen) applySlidesMode();
     })();
 
