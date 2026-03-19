@@ -871,55 +871,43 @@
   <script>
     const DEFAULT = `# litbin
 
-A literate markdown pastebin. No accounts, no databases, no backend. **Your entire document is stored in the URL** — share the link, share the content.
+**Zero-backend literate programming pastebin.** Write markdown with executable code, diagrams, visualizations, and whiteboards. Everything is stored in the URL — no accounts, no databases, no backend. Share the link, share the content.
 
 ---
 
-## Sort visualizer
+## 🚀 Quick Start
 
-Use \`sort:lang\` as the fence tag to animate sorting algorithms. Define your dataset once in a \`data\` block — inject it into every implementation with \`{varname}\` in the fence tag. At n=30, O(n²) insertion sort loses to O(n log n) merge/quicksort:
+Try the features below. Click **Slides** for fullscreen presentation mode, or edit the markdown to see the preview update in real-time. Use **Ctrl+K** to open the command palette, **Ctrl+H** for find/replace, and **?** for keyboard shortcuts.
+
+---
+
+## 📊 Lit Variables & Data
+
+Define data once, inject into any code block. Use \`data\` blocks with \`{varname}\` references:
 
 \`\`\`data
-arr = random(30, 1, 100)
+numbers = random(20, 1, 100)
 \`\`\`
 
-\`\`\`sort:python {arr}
-# Insertion sort -- O(n^2): sort_print on every comparison so the quadratic work is visible
-sort_print(arr)
-for i in range(1, len(arr)):
-    key = arr[i]
+Inject \`{numbers}\` into any \`sort:\` or code block — it auto-serializes to the correct language syntax. Great for literate algorithm comparisons:
+
+\`\`\`sort:python {numbers}
+# Insertion sort
+sort_print(numbers)
+for i in range(1, len(numbers)):
+    key = numbers[i]
     j = i - 1
-    while j >= 0 and arr[j] > key:
-        arr[j+1] = arr[j]
-        sort_print(arr, compare=j, swap=j+1)
+    while j >= 0 and numbers[j] > key:
+        numbers[j+1] = numbers[j]
+        sort_print(numbers, compare=j, swap=j+1)
         j -= 1
-    arr[j+1] = key
-sort_print(arr)
+    numbers[j+1] = key
+sort_print(numbers)
 \`\`\`
 
-\`\`\`sort:python {arr}
-# Merge sort
-disp = list(arr)
-n = len(disp)
-def ms(lo, hi):
-    if hi-lo<=1: return
-    mid=(lo+hi)//2
-    ms(lo,mid); ms(mid,hi)
-    L,R=disp[lo:mid],disp[mid:hi]
-    i=j=0
-    for k in range(lo,hi):
-        if i<len(L) and (j>=len(R) or L[i]<=R[j]):
-            disp[k]=L[i]; i+=1
-        else:
-            disp[k]=R[j]; j+=1
-        sort_print(disp, swap=k)
-sort_print(disp)
-ms(0,n)
-sort_print(disp)
-\`\`\`
 
-\`\`\`sort:lisp {arr}
-; Quicksort -- median-of-three pivot
+\`\`\`sort:lisp {numbers}
+; Quicksort with median-of-three pivot
 (defun swap-el (a i j) (rotatef (aref a i) (aref a j)))
 (defun median-of-three (a lo hi)
   (let ((mid (floor (+ lo hi) 2)))
@@ -943,78 +931,131 @@ sort_print(disp)
       (sort-print a :swap p)
       (when (> p lo) (quicksort a lo (1- p)))
       (quicksort a (1+ p) hi))))
-(sort-print arr)
-(quicksort arr 0 (1- (length arr)))
-(sort-print arr)
-\`\`\`
-
-\`\`\`sort:lisp {arr}
-; Merge sort -- functional style with list operations
-(defun small (lst) (null (cdr lst)))
-(defun left-half (lst) (subseq lst 0 (floor (length lst) 2)))
-(defun right-half (lst) (subseq lst (floor (length lst) 2)))
-(defun merge-lists (list1 list2)
-  (merge 'list list1 list2 #'<))
-(defun merge-sort (lst)
-  (if (small lst) lst
-      (merge-lists (merge-sort (left-half lst))
-                   (merge-sort (right-half lst)))))
-; Instrumented wrapper -- writes merged sublists back to arr for visualization
-(defun ms-vis (lst start)
-  (if (small lst) lst
-      (let* ((mid (floor (length lst) 2))
-             (sorted (merge-lists (ms-vis (left-half lst) start)
-                                  (ms-vis (right-half lst) (+ start mid)))))
-        (loop for v in sorted for i from start do
-          (setf (aref arr i) v) (sort-print arr :swap i))
-        sorted)))
-(sort-print arr)
-(ms-vis (coerce arr 'list) 0)
-(sort-print arr)
+(sort-print numbers)
+(quicksort numbers 0 (1- (length numbers)))
+(sort-print numbers)
 \`\`\`
 
 ---
 
-## What else you can do
+## 🎨 Rich Content
 
-**Math** — inline $O(n \\log n)$ or display blocks:
+**Math** — LaTeX inline $e = mc^2$ or display blocks:
 
-$$\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$$
+$$\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$$
 
-**Diagrams** — mermaid blocks render automatically:
+**Diagrams** — Mermaid renders automatically:
 
 \`\`\`mermaid
-graph LR
-    A[Write markdown] --> B[URL updates live]
-    B --> C[Share the link]
-    C --> D[They see your content]
+graph TD
+    A[Editor] -->|Live render| B[Preview]
+    B -->|Copy URL| C[Share]
+    C -->|Friend opens| A
+    D[Excalidraw] -->|Click to edit| E[Whiteboard]
+    E -->|Save back| A
 \`\`\`
 
-**Runnable code** — any supported language, hit ▶ Run:
+**Whiteboards** — Interactive Excalidraw sketches embedded directly:
+
+\`\`\`excalidraw
+{"elements":[{"id":"a","type":"rectangle","x":50,"y":50,"width":100,"height":80,"angle":0,"strokeColor":"#000000","backgroundColor":"#87ceeb","fillStyle":"solid","roughness":0,"strokeWidth":2,"strokeStyle":"solid","roughness":0}],"appState":{"viewBackgroundColor":"#ffffff"}}
+\`\`\`
+
+---
+
+## 💻 Code Execution & Visualization
+
+Run code in 24+ languages — hit ▶ Run. Supports Python, JavaScript, TypeScript, Ruby, Go, Rust, C++, Java, Lisp, and more:
 
 \`\`\`python
-def fib(n):
+def fibonacci(n):
     a, b = 0, 1
+    result = []
     for _ in range(n):
+        result.append(a)
         a, b = b, a + b
-    return a
+    return result
 
-print([fib(i) for i in range(10)])
+print(fibonacci(15))
 \`\`\`
 
-**Slides** — click **Slides** (or open with \`?slides\` in the URL) for a fullscreen presentation. Each \`---\` separator becomes a slide boundary.
+**Algorithm visualization** — \`sort:lang\` blocks animate step-by-step with comparisons (yellow) and swaps (red):
+
+\`\`\`sort:python {numbers}
+# Merge sort
+disp = list(numbers)
+def merge(lo, mid, hi):
+    L, R = disp[lo:mid], disp[mid:hi]
+    i = j = 0
+    for k in range(lo, hi):
+        if i < len(L) and (j >= len(R) or L[i] <= R[j]):
+            disp[k] = L[i]
+            i += 1
+        else:
+            disp[k] = R[j]
+            j += 1
+        sort_print(disp, swap=k)
+def ms(lo, hi):
+    if hi - lo <= 1:
+        return
+    mid = (lo + hi) // 2
+    ms(lo, mid)
+    ms(mid, hi)
+    merge(lo, mid, hi)
+sort_print(disp)
+ms(0, len(disp))
+sort_print(disp)
+\`\`\`
+
+Click **Run all** to execute all code blocks simultaneously. Use **Master playback bar** (appears after Visualize) to step through all animations in sync.
 
 ---
 
-## How it works
+## 🎥 Multimedia
 
-Everything you type is compressed and encoded into the URL fragment (the part after \`#\`). The fragment never leaves your browser — no server ever sees your content.
+Embed videos from YouTube, Vimeo, or direct video files. Just paste the URL on its own line:
 
-**Short URLs:** Hit **Short URL** for a 1-year shortlink.
+https://www.youtube.com/watch?v=dQw4w9WgXcQ
+
+Or use direct video files:
+
+https://commondatastorage.googleapis.com/gtv-videos-library/sample/Big_Buck_Bunny_1080_24fps_Normal.mp4
 
 ---
 
-*Start typing on the left. The preview updates as you write.*
+## ✏️ Editing Features
+
+- **Live mode** — Obsidian-style block editing. Click a rendered block to edit it inline. Arrow keys navigate, Enter/Tab indent lists.
+- **Drag reorder** — In Live mode, grab the grip handle (appears on hover) and drag blocks to reorder them.
+- **Find & Replace** — **Ctrl+H** to open the find/replace panel. Navigate matches with next/prev buttons.
+- **Command Palette** — **Ctrl+K** in any editor view (split, live, or preview) opens fuzzy-search command palette for quick block insertion and actions.
+- **Keyboard Shortcuts** — Press **?** in the header to see all keybindings (Tab/Shift+Tab in lists, Ctrl+B/I for bold/italic, etc.).
+
+---
+
+## 🎤 Presentations
+
+Click **Slides** (or add \`?slides\` to the URL) for fullscreen presentation mode. Each \`---\` separator becomes a slide boundary:
+
+---
+
+## 📱 View & Share
+
+- **View mode** — Add \`?view\` to the URL for read-only view (hide editor pane). Perfect for sharing finished documents.
+- **PDF export** — Hit **PDF** button in the header, then Ctrl+P or browser print → Save as PDF.
+- **Short URL** — Click **Short URL** to get a 1-year shortlink via LinkShrink.
+
+---
+
+## 🔒 How It Works
+
+Everything you type is **deflate-compressed and base64url-encoded into the URL fragment** (the part after \`#\`). The fragment never leaves your browser — no server ever sees your content. Share the URL, and recipients see the exact same content.
+
+Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error at 1.5 MB.
+
+---
+
+*Start typing on the left. The preview updates as you write. Use Ctrl+K for commands, ? for shortcuts.*
 `;
 
     const editor   = document.getElementById('editor');
