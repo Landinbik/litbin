@@ -405,6 +405,50 @@
       color: var(--text-muted);
     }
 
+    /* ── Find and replace panel ── */
+    .find-replace-panel {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      z-index: 1500;
+      min-width: 360px;
+      padding: 0;
+      overflow: hidden;
+    }
+    .fr-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .fr-title { font-size: 13px; font-weight: 600; }
+    .fr-close { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 0 4px; }
+    #frFind, #frReplace { width: 100%; padding: 8px 14px; background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text); font-size: 13px; outline: none; box-sizing: border-box; }
+    #frReplace { border-bottom: none; }
+    .fr-controls { display: flex; gap: 6px; padding: 8px 14px; }
+    .fr-btn { padding: 5px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 12px; cursor: pointer; }
+    .fr-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .fr-status { font-size: 11px; color: var(--text-muted); padding: 0 14px; }
+
+    /* ── Shortcuts modal ── */
+    .shortcuts-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1900; display: flex; align-items: center; justify-content: center; }
+    .shortcuts-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; max-height: 80vh; width: 600px; max-width: 92vw; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+    .shortcuts-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .shortcuts-head h3 { margin: 0; font-size: 16px; }
+    .shortcuts-close { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; padding: 0; }
+    .shortcuts-content { padding: 16px 20px; }
+    .shortcuts-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .shortcuts-table th, .shortcuts-table td { text-align: left; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .shortcuts-table th { font-weight: 600; color: var(--text-muted); font-size: 11px; }
+    .shortcuts-table code { background: var(--surface); padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+
     .live-block {
       position: relative;
       border-radius: 5px;
@@ -565,6 +609,10 @@
     .master-viz-ctrl input[type=range] { width: 70px; }
 
     /* ── Lit data blocks ── */
+    /* ── Video embeds ── */
+    .video-embed { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; margin: 1em 0; border-radius: 8px; background: #000; }
+    .video-embed iframe, .video-embed video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; border-radius: 8px; }
+
     .lit-data-block { border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 1em 0; font-family: var(--font-mono, monospace); font-size: 13px; }
     .lit-data-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 8px; }
     .lit-data-table { border-collapse: collapse; width: 100%; }
@@ -705,6 +753,46 @@
     <div class="cmd-palette-box">
       <input id="cmdInput" type="text" placeholder="Type a command or insert block…" autocomplete="off" spellcheck="false">
       <div id="cmdList" class="cmd-list"></div>
+    </div>
+  </div>
+
+  <div class="find-replace-panel" id="findReplacePanel" style="display:none">
+    <div class="fr-header">
+      <span class="fr-title">Find and Replace</span>
+      <button class="fr-close" id="frClose">&times;</button>
+    </div>
+    <input id="frFind" type="text" placeholder="Find" autocomplete="off" spellcheck="false">
+    <input id="frReplace" type="text" placeholder="Replace with" autocomplete="off" spellcheck="false">
+    <div class="fr-controls">
+      <button id="frNext" class="fr-btn">Find Next</button>
+      <button id="frPrev" class="fr-btn">Find Prev</button>
+      <button id="frReplaceBtn" class="fr-btn">Replace</button>
+      <button id="frReplaceAll" class="fr-btn">Replace All</button>
+    </div>
+    <span id="frStatus" class="fr-status"></span>
+  </div>
+
+  <div class="shortcuts-modal" id="shortcutsModal" style="display:none">
+    <div class="shortcuts-box">
+      <div class="shortcuts-head">
+        <h3>Keyboard Shortcuts</h3>
+        <button class="shortcuts-close" id="shortcutsClose">&times;</button>
+      </div>
+      <div class="shortcuts-content md-body">
+        <table class="shortcuts-table">
+          <tr><th>Key</th><th>Action</th><th>Mode</th></tr>
+          <tr><td><code>Tab</code></td><td>Indent / insert 2 spaces</td><td>Editor, Live</td></tr>
+          <tr><td><code>Shift+Tab</code></td><td>Dedent list item</td><td>Live lists</td></tr>
+          <tr><td><code>Enter</code></td><td>Continue list / split block</td><td>Live lists</td></tr>
+          <tr><td><code>Ctrl+K</code> / <code>Cmd+K</code></td><td>Open command palette</td><td>Live, Editor</td></tr>
+          <tr><td><code>Ctrl+H</code> / <code>Cmd+H</code></td><td>Find and replace</td><td>Editor</td></tr>
+          <tr><td><code>Ctrl+B</code> / <code>Cmd+B</code></td><td>Toggle <strong>bold</strong></td><td>Editor, Live</td></tr>
+          <tr><td><code>Ctrl+I</code> / <code>Cmd+I</code></td><td>Toggle <em>italic</em></td><td>Editor, Live</td></tr>
+          <tr><td><code>Escape</code></td><td>Exit edit mode / close palette</td><td>Live, Palette</td></tr>
+          <tr><td><code>↑ ↓</code></td><td>Navigate command palette</td><td>Palette</td></tr>
+          <tr><td><code>Backspace</code> (start)</td><td>Merge with previous block</td><td>Live</td></tr>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -1071,6 +1159,36 @@ Everything you type is compressed and encoded into the URL fragment (the part af
 
     // ── Marked options ───────────────────────────────────────────────────────
     marked.use({ breaks: true, gfm: true });
+
+    // ── Video embed renderer ──────────────────────────────────────────────────
+    (function() {
+      const YT  = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/;
+      const VIM = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/;
+      const VID = /https?:\/\/\S+\.(mp4|webm|ogv|ogg)(\?[^\s]*)?$/i;
+
+      function videoEmbed(url) {
+        let m;
+        if ((m = url.match(YT)))
+          return `<div class="video-embed"><iframe src="https://www.youtube.com/embed/${m[1]}" allowfullscreen loading="lazy"></iframe></div>`;
+        if ((m = url.match(VIM)))
+          return `<div class="video-embed"><iframe src="https://player.vimeo.com/video/${m[1]}" allowfullscreen loading="lazy"></iframe></div>`;
+        if (VID.test(url))
+          return `<div class="video-embed"><video controls preload="metadata"><source src="${url}"></video></div>`;
+        return null;
+      }
+
+      marked.use({ renderer: {
+        paragraph(text) {
+          // strip a single wrapping <a href="url">url</a> or bare URL
+          const stripped = text.replace(/<a [^>]*href="([^"]+)"[^>]*>[\s\S]*?<\/a>/g, '$1').trim();
+          if (!/\s/.test(stripped)) {
+            const embed = videoEmbed(stripped);
+            if (embed) return embed;
+          }
+          return false; // default rendering
+        }
+      }});
+    })();
 
     // ── Custom code renderer (data blocks + lit-var injection) ───────────────
     marked.use({ renderer: {
@@ -3141,6 +3259,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       { section: 'Actions', items: [
         { label: 'Run all code blocks',      icon: '▶',  action: () => runAllCode(liveContent) },
         { label: 'Visualize all sorts',      icon: '▶',  action: () => visualizeAllSorts(liveContent) },
+        { label: 'Keyboard shortcuts',       icon: '?',  action: () => { closePalette(); shortcutsModalEl.style.display = 'flex'; } },
         { label: 'Toggle theme',             icon: '◑',  action: () => themeBtn.click() },
         { label: 'Open docs',                icon: '?',  action: () => docsBtn.click() },
         { label: 'Share / copy URL',         icon: '↗',  action: () => shareBtn.click() },
@@ -3246,12 +3365,130 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     });
     cmdPaletteEl.addEventListener('mousedown', e => { if (e.target === cmdPaletteEl) closePalette(); });
 
+    // ── Shortcuts modal ──────────────────────────────────────────────────────
+    const shortcutsModalEl = document.getElementById('shortcutsModal');
+    const shortcutsCloseEl = document.getElementById('shortcutsClose');
+    shortcutsCloseEl.addEventListener('click', () => { shortcutsModalEl.style.display = 'none'; });
+    shortcutsModalEl.addEventListener('mousedown', e => { if (e.target === shortcutsModalEl) shortcutsModalEl.style.display = 'none'; });
+
+    // ── Find and replace ──────────────────────────────────────────────────────
+    const frPanelEl = document.getElementById('findReplacePanel');
+    const frFindEl = document.getElementById('frFind');
+    const frReplaceEl = document.getElementById('frReplace');
+    const frNextBtn = document.getElementById('frNext');
+    const frPrevBtn = document.getElementById('frPrev');
+    const frReplaceBtnEl = document.getElementById('frReplaceBtn');
+    const frReplaceAllBtn = document.getElementById('frReplaceAll');
+    const frCloseEl = document.getElementById('frClose');
+    const frStatusEl = document.getElementById('frStatus');
+    let frCurrentIdx = -1;
+    let frMatches = [];
+
+    function findMatches(query) {
+      frMatches = [];
+      if (!query) return;
+      const text = editor.value.toLowerCase();
+      const q = query.toLowerCase();
+      let idx = text.indexOf(q);
+      while (idx !== -1) {
+        frMatches.push({ start: idx, end: idx + q.length });
+        idx = text.indexOf(q, idx + 1);
+      }
+      frCurrentIdx = -1;
+      updateFRStatus();
+    }
+
+    function updateFRStatus() {
+      const total = frMatches.length;
+      const curr = frCurrentIdx >= 0 ? frCurrentIdx + 1 : 0;
+      frStatusEl.textContent = total ? `${curr} of ${total}` : 'No matches';
+    }
+
+    function goToMatch(idx) {
+      if (idx < 0 || idx >= frMatches.length) return;
+      frCurrentIdx = idx;
+      const m = frMatches[idx];
+      editor.focus();
+      editor.setSelectionRange(m.start, m.end);
+      updateFRStatus();
+    }
+
+    function replaceCurrent() {
+      if (frCurrentIdx < 0 || frCurrentIdx >= frMatches.length) return;
+      const m = frMatches[frCurrentIdx];
+      const before = editor.value.slice(0, m.start);
+      const after = editor.value.slice(m.end);
+      const newVal = before + frReplaceEl.value + after;
+      const lenDiff = frReplaceEl.value.length - (m.end - m.start);
+      editor.value = newVal;
+      // Shift all matches after this one
+      for (let i = frCurrentIdx + 1; i < frMatches.length; i++) {
+        frMatches[i].start += lenDiff;
+        frMatches[i].end += lenDiff;
+      }
+      frMatches.splice(frCurrentIdx, 1);
+      if (frCurrentIdx >= frMatches.length && frCurrentIdx > 0) frCurrentIdx--;
+      if (frMatches.length) goToMatch(frCurrentIdx);
+      else frStatusEl.textContent = 'No matches';
+      updateLineNums();
+      editor.dispatchEvent(new Event('input'));
+    }
+
+    function replaceAll() {
+      let count = 0;
+      const q = frFindEl.value;
+      const r = frReplaceEl.value;
+      if (!q) return;
+      let newVal = editor.value;
+      newVal = newVal.split(q).join(r);
+      editor.value = newVal;
+      count = frMatches.length;
+      frMatches = [];
+      frCurrentIdx = -1;
+      frStatusEl.textContent = count ? `Replaced ${count}` : 'No matches';
+      updateLineNums();
+      editor.dispatchEvent(new Event('input'));
+    }
+
+    frFindEl.addEventListener('input', () => {
+      findMatches(frFindEl.value);
+      if (frMatches.length) goToMatch(0);
+    });
+    frFindEl.addEventListener('keydown', e => { if (e.key === 'Enter') frNextBtn.click(); });
+    frReplaceEl.addEventListener('keydown', e => { if (e.key === 'Enter') frReplaceBtnEl.click(); });
+    frNextBtn.addEventListener('click', () => { if (frMatches.length) goToMatch((frCurrentIdx + 1) % frMatches.length); });
+    frPrevBtn.addEventListener('click', () => { if (frMatches.length) goToMatch(frCurrentIdx - 1 < 0 ? frMatches.length - 1 : frCurrentIdx - 1); });
+    frReplaceBtnEl.addEventListener('click', replaceCurrent);
+    frReplaceAllBtn.addEventListener('click', replaceAll);
+    frCloseEl.addEventListener('click', () => { frPanelEl.style.display = 'none'; frFindEl.value = ''; frMatches = []; });
+
+    // ── Global keydown for Ctrl+K and Ctrl+H ──────────────────────────────────
     document.addEventListener('keydown', e => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        if (!liveMode) return;
+      // Ctrl+K — command palette (live or split mode)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k' && !e.shiftKey) {
+        if (!liveMode && frPanelEl.style.display === 'none') {
+          // Split mode: intercept Ctrl+K
+          e.preventDefault();
+          e.stopPropagation();
+          editor.focus();
+          // For split mode, we need a split-mode aware palette variant
+          // For now, just toggle the palette if in split mode
+          cmdPaletteEl.style.display === 'none' ? openPalette() : closePalette();
+        } else if (liveMode) {
+          e.preventDefault();
+          e.stopPropagation();
+          cmdPaletteEl.style.display === 'none' ? openPalette() : closePalette();
+        }
+      }
+      // Ctrl+H — find/replace (split mode only)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'h' && !liveMode) {
         e.preventDefault();
-        e.stopPropagation();
-        cmdPaletteEl.style.display === 'none' ? openPalette() : closePalette();
+        frPanelEl.style.display = 'flex';
+        frFindEl.focus();
+        if (editor.selectionStart !== editor.selectionEnd) {
+          frFindEl.value = editor.value.slice(editor.selectionStart, editor.selectionEnd);
+          findMatches(frFindEl.value);
+        }
       }
     });
     // ─────────────────────────────────────────────────────────────────────────
