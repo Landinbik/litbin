@@ -634,6 +634,13 @@
     .master-viz-ctrl button.active { background: var(--accent); color: var(--text-on-accent); border-color: var(--accent); }
     .master-viz-ctrl input[type=range] { width: 70px; }
 
+    /* ── Viz cross-references ── */
+    .viz-ref { border: 1px solid var(--border); border-radius: 6px; background: var(--surface); padding: 12px 16px; margin: 1em 0; }
+    .viz-ref-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .viz-ref-placeholder { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 20px 0; text-align: center; }
+    .viz-ref .sort-viz { border: none; padding: 0; border-radius: 0; }
+    .viz-ref-group { margin: 1em 0; }
+
     /* ── Lit data blocks ── */
     /* ── Video embeds ── */
     .video-embed { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; margin: 1em 0; border-radius: 8px; background: #000; }
@@ -899,7 +906,7 @@ numbers = random(20, 1, 100)
 
 Inject \`{numbers}\` into any \`sort:\` or code block — it auto-serializes to the correct language syntax. Great for literate algorithm comparisons:
 
-\`\`\`sort:python {numbers}
+\`\`\`sort:python #insertion {numbers}
 # Insertion sort
 sort_print(numbers)
 for i in range(1, len(numbers)):
@@ -914,7 +921,7 @@ sort_print(numbers)
 \`\`\`
 
 
-\`\`\`sort:lisp {numbers}
+\`\`\`sort:lisp #quicksort {numbers}
 ; Quicksort
 (defun swap-el (a i j) (rotatef (aref a i) (aref a j)))
 (defun qs-partition (a lo hi)
@@ -936,7 +943,7 @@ sort_print(numbers)
 (sort-print numbers)
 \`\`\`
 
-\`\`\`sort:cpp {numbers}
+\`\`\`sort:cpp #timsort {numbers}
 // Timsort — insertion sort small runs, then merge up
 const int RUN=4;
 void insSort(std::vector<int>&a,int lo,int hi){
@@ -975,6 +982,19 @@ int main(){
   timsort(numbers);
   sort_print(numbers);
 }
+\`\`\`
+
+### Algorithm Comparison
+
+Click **▶ Visualize all** above, then compare the animations side by side:
+
+\`\`\`viz:insertion "Insertion Sort"
+\`\`\`
+
+\`\`\`viz:quicksort "Quicksort"
+\`\`\`
+
+\`\`\`viz:timsort "Timsort"
 \`\`\`
 
 ---
@@ -1297,6 +1317,15 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
           return `<div class="lit-data-block"><div class="lit-data-label">data</div><table class="lit-data-table">${rows}</table></div>`;
         }
 
+        // viz reference block
+        const vizMatch = lang.match(/^viz[:-]([a-zA-Z0-9_-]+)/);
+        if (vizMatch) {
+          const refId = vizMatch[1];
+          const titleMatch = lang.match(/"([^"]+)"/);
+          const title = titleMatch ? titleMatch[1] : refId;
+          return `<div class="viz-ref" data-viz-ref="${refId}"><div class="viz-ref-title">${title}</div><div class="viz-ref-placeholder">Click ▶ Visualize on the source block to see the animation</div></div>`;
+        }
+
         // parse {varname,...} refs from infostring
         const varRefs = [];
         const varRe = /\{([^}]+)\}/g;
@@ -1304,18 +1333,26 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
         while ((vm = varRe.exec(lang)) !== null) {
           vm[1].split(',').forEach(n => { const t = n.trim(); if (t) varRefs.push(t); });
         }
-        // strip {var} groups from lang for class name
-        const cleanLang = lang.replace(/\{[^}]*\}/g, '').trim();
 
-        if (varRefs.length === 0) return false; // default rendering
+        // parse #id from infostring
+        const idMatch = lang.match(/#([a-zA-Z0-9_-]+)/);
+        const vizId = idMatch ? idMatch[1] : null;
 
-        // emit custom HTML with data-lit-vars
+        // strip {var} groups and #id from lang for class name
+        const cleanLang = lang.replace(/\{[^}]*\}/g, '').replace(/#[a-zA-Z0-9_-]+/, '').trim();
+
+        if (varRefs.length === 0 && !vizId) return false; // default rendering
+
+        // emit custom HTML with data-lit-vars and/or data-viz-id
         // extract actual language from possible "sort:LANG" prefix for hljs
         const hljsLang = cleanLang.replace(/^sort[:-]/, '');
         const highlighted = (typeof hljs !== 'undefined' && hljsLang)
           ? (hljs.getLanguage(hljsLang) ? hljs.highlight(code, { language: hljsLang }).value : code.replace(/&/g,'&amp;').replace(/</g,'&lt;'))
           : code.replace(/&/g,'&amp;').replace(/</g,'&lt;');
-        return `<pre><code class="language-${cleanLang} hljs" data-lit-vars="${varRefs.join(',')}">${highlighted}</code></pre>`;
+        const attrs = [];
+        if (varRefs.length) attrs.push(`data-lit-vars="${varRefs.join(',')}"`);
+        if (vizId) attrs.push(`data-viz-id="${vizId}"`);
+        return `<pre><code class="language-${cleanLang} hljs" ${attrs.join(' ')}>${highlighted}</code></pre>`;
       }
     }});
 
@@ -1597,6 +1634,7 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
 
     // ── Master viz sync ──────────────────────────────────────────────────────
     const _masterVizMap = new WeakMap(); // container el → masterState
+    const _vizFrameStore = new Map();   // vizId → { frames }
 
     // ── Lit variable system ──────────────────────────────────────────────────
     let _litVars = {};
@@ -1844,6 +1882,25 @@ For languages without a built-in helper, print space-separated values and wrap i
 8 (3) [2] 9 1 5    # bar 1 yellow, bar 2 red
 \`\`\`
 
+### Cross-references
+
+Assign an ID to any \`sort:\` block with \`#id\` in the fence info string, then reference its visualization elsewhere with a \`viz:id\` block:
+
+\`\`\`
+\\\`\\\`\\\`sort:python #insertion {numbers}
+# ... sorting code ...
+\\\`\\\`\\\`
+\`\`\`
+
+Then show the visualization anywhere:
+
+\`\`\`
+\\\`\\\`\\\`viz:insertion "Insertion Sort"
+\\\`\\\`\\\`
+\`\`\`
+
+The \`viz:\` block shows a placeholder until the source is run, then displays a live copy of the visualization with its own playback controls. Re-running the source block updates all references automatically.
+
 ---
 
 ## Excalidraw
@@ -2003,6 +2060,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         const pre  = codeEl.parentElement;
         const wrap = document.createElement('div');
         wrap.className = 'code-block-wrap';
+        if (codeEl.dataset.vizId) wrap.dataset.vizId = codeEl.dataset.vizId;
         pre.replaceWith(wrap);
 
         // Left column: code + button + output (so run-btn positions relative to it)
@@ -2286,12 +2344,160 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       // Register with master viz controller if one exists in an ancestor container
       let el = wrapEl.parentElement;
       while (el) {
-        if (_masterVizMap.has(el)) { _masterVizMap.get(el).register({ renderFrame, frameCount: frames.length }); break; }
+        if (_masterVizMap.has(el)) { _masterVizMap.get(el).register({ renderFrame, frameCount: frames.length, speedSlider }); break; }
         el = el.parentElement;
       }
 
       viz._cleanup = pause;
       return viz;
+    }
+
+    function updateVizRefs(vizId, frames) {
+      document.querySelectorAll(`.viz-ref[data-viz-ref="${vizId}"]`).forEach(el => {
+        const old = el.querySelector('.sort-viz');
+        if (old) { old._cleanup?.(); old.remove(); }
+        const ph = el.querySelector('.viz-ref-placeholder');
+        if (ph) ph.remove();
+        createSortVisualizer(frames, el);
+      });
+    }
+
+    function hydrateVizRefs(container) {
+      // Group consecutive viz-ref elements and add master controls
+      groupVizRefs(container);
+      container.querySelectorAll('.viz-ref').forEach(el => {
+        const stored = _vizFrameStore.get(el.dataset.vizRef);
+        if (!stored) return;
+        if (el.querySelector('.sort-viz')) return; // already hydrated
+        const ph = el.querySelector('.viz-ref-placeholder');
+        if (ph) ph.remove();
+        createSortVisualizer(stored.frames, el);
+      });
+    }
+
+    function groupVizRefs(container) {
+      // Find consecutive .viz-ref siblings and wrap them in a group with master controls
+      const refs = [...container.querySelectorAll('.viz-ref')];
+      if (refs.length < 2) return;
+
+      // Group consecutive viz-refs
+      const groups = [];
+      let current = [refs[0]];
+      for (let i = 1; i < refs.length; i++) {
+        // Check if this viz-ref is the next sibling of the previous one
+        let prev = current[current.length - 1].nextElementSibling;
+        if (prev === refs[i]) {
+          current.push(refs[i]);
+        } else {
+          if (current.length >= 2) groups.push(current);
+          current = [refs[i]];
+        }
+      }
+      if (current.length >= 2) groups.push(current);
+
+      groups.forEach(group => {
+        // Skip if already wrapped
+        if (group[0].parentElement.classList.contains('viz-ref-group')) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'viz-ref-group';
+        group[0].parentElement.insertBefore(wrapper, group[0]);
+        group.forEach(el => wrapper.appendChild(el));
+
+        // Create master controller
+        createMasterController(wrapper);
+      });
+    }
+
+    function createMasterController(container, appendTo) {
+      if (_masterVizMap.has(container)) return;
+
+      const masterCtrl = document.createElement('div');
+      masterCtrl.className = 'master-viz-ctrl';
+
+      const masterLabel = document.createElement('span');
+      masterLabel.className = 'master-viz-label';
+      masterLabel.textContent = 'All';
+
+      const masterPrev = document.createElement('button');
+      masterPrev.textContent = '⏮';
+      masterPrev.title = 'Previous step (all)';
+      const masterPlay = document.createElement('button');
+      masterPlay.textContent = '▶';
+      masterPlay.title = 'Play/Pause (all)';
+      const masterNext = document.createElement('button');
+      masterNext.textContent = '⏭';
+      masterNext.title = 'Next step (all)';
+
+      const masterSpeedLabel = document.createElement('span');
+      masterSpeedLabel.textContent = 'Speed:';
+      const masterSpeed = document.createElement('input');
+      masterSpeed.type = 'range';
+      masterSpeed.min = '1';
+      masterSpeed.max = '10';
+      masterSpeed.value = '5';
+
+      const masterFrame = document.createElement('span');
+      masterFrame.className = 'sort-viz-frame';
+
+      masterCtrl.append(masterLabel, masterPrev, masterPlay, masterNext, masterSpeedLabel, masterSpeed, masterFrame);
+      if (appendTo) appendTo.appendChild(masterCtrl);
+      else container.insertBefore(masterCtrl, container.firstChild);
+
+      const ms = {
+        vizzes: [],
+        frame: 0,
+        playing: false,
+        interval: null,
+        maxFrames() { return this.vizzes.length ? Math.max(...this.vizzes.map(v => v.frameCount)) : 0; },
+        register(api) {
+          this.vizzes.push(api);
+          masterCtrl.classList.add('visible');
+          this.updateUI();
+        },
+        go(f) {
+          this.frame = Math.max(0, Math.min(f, this.maxFrames() - 1));
+          this.vizzes.forEach(v => v.renderFrame(Math.min(this.frame, v.frameCount - 1)));
+          this.updateUI();
+        },
+        getDelay() { return Math.round(1000 / Number(masterSpeed.value)); },
+        play() {
+          this.playing = true;
+          masterPlay.textContent = '⏸';
+          masterPlay.classList.add('active');
+          this.interval = setInterval(() => {
+            if (this.frame >= this.maxFrames() - 1) { this.pause(); return; }
+            this.go(this.frame + 1);
+          }, this.getDelay());
+        },
+        pause() {
+          this.playing = false;
+          masterPlay.textContent = '▶';
+          masterPlay.classList.remove('active');
+          clearInterval(this.interval);
+        },
+        updateUI() {
+          const total = this.maxFrames();
+          masterFrame.textContent = total ? `${this.frame + 1} / ${total}` : '';
+        },
+      };
+
+      masterPrev.addEventListener('click', () => { ms.pause(); ms.go(ms.frame - 1); });
+      masterNext.addEventListener('click', () => { ms.pause(); ms.go(ms.frame + 1); });
+      masterPlay.addEventListener('click', () => {
+        if (ms.playing) { ms.pause(); return; }
+        if (ms.frame >= ms.maxFrames() - 1) ms.go(0);
+        ms.play();
+      });
+      masterSpeed.addEventListener('input', () => {
+        ms.vizzes.forEach(v => { if (v.speedSlider) v.speedSlider.value = masterSpeed.value; });
+        if (ms.playing) { clearInterval(ms.interval); ms.interval = setInterval(() => {
+          if (ms.frame >= ms.maxFrames() - 1) { ms.pause(); return; }
+          ms.go(ms.frame + 1);
+        }, ms.getDelay()); }
+      });
+
+      _masterVizMap.set(container, ms);
     }
 
     // Modified execution for sort blocks: run code, then visualize output
@@ -2342,6 +2548,11 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
             outEl.className = 'code-output'; // hide raw output
             outEl.innerHTML = '';
             createSortVisualizer(frames, vizContainer);
+            const vizId = vizContainer.dataset.vizId;
+            if (vizId) {
+              _vizFrameStore.set(vizId, { frames });
+              updateVizRefs(vizId, frames);
+            }
           } else {
             outEl.innerHTML = '';
             const el = document.createElement('span');
@@ -2428,6 +2639,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       updateWordCount();
       updateLineNums();
       addActionButtons(preview);
+      hydrateVizRefs(preview);
     }
 
     function addActionButtons(container) {
@@ -2450,91 +2662,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       btnContainer.appendChild(vizAllBtn);
 
       // ── Master viz control bar ──────────────────────────────────────────────
-      const masterCtrl = document.createElement('div');
-      masterCtrl.className = 'master-viz-ctrl';
-
-      const masterLabel = document.createElement('span');
-      masterLabel.className = 'master-viz-label';
-      masterLabel.textContent = 'All';
-
-      const masterPrev = document.createElement('button');
-      masterPrev.textContent = '⏮';
-      masterPrev.title = 'Previous step (all)';
-      const masterPlay = document.createElement('button');
-      masterPlay.textContent = '▶';
-      masterPlay.title = 'Play/Pause (all)';
-      const masterNext = document.createElement('button');
-      masterNext.textContent = '⏭';
-      masterNext.title = 'Next step (all)';
-
-      const masterSpeedLabel = document.createElement('span');
-      masterSpeedLabel.textContent = 'Speed:';
-      const masterSpeed = document.createElement('input');
-      masterSpeed.type = 'range';
-      masterSpeed.min = '1';
-      masterSpeed.max = '10';
-      masterSpeed.value = '5';
-
-      const masterFrame = document.createElement('span');
-      masterFrame.className = 'sort-viz-frame';
-
-      masterCtrl.append(masterLabel, masterPrev, masterPlay, masterNext, masterSpeedLabel, masterSpeed, masterFrame);
-      btnContainer.appendChild(masterCtrl);
-
-      // Master state
-      const ms = {
-        vizzes: [],
-        frame: 0,
-        playing: false,
-        interval: null,
-        maxFrames() { return this.vizzes.length ? Math.max(...this.vizzes.map(v => v.frameCount)) : 0; },
-        register(api) {
-          this.vizzes.push(api);
-          masterCtrl.classList.add('visible');
-          this.updateUI();
-        },
-        go(f) {
-          this.frame = Math.max(0, Math.min(f, this.maxFrames() - 1));
-          this.vizzes.forEach(v => v.renderFrame(Math.min(this.frame, v.frameCount - 1)));
-          this.updateUI();
-        },
-        getDelay() { return Math.round(1000 / Number(masterSpeed.value)); },
-        play() {
-          this.playing = true;
-          masterPlay.textContent = '⏸';
-          masterPlay.classList.add('active');
-          this.interval = setInterval(() => {
-            if (this.frame >= this.maxFrames() - 1) { this.pause(); return; }
-            this.go(this.frame + 1);
-          }, this.getDelay());
-        },
-        pause() {
-          this.playing = false;
-          masterPlay.textContent = '▶';
-          masterPlay.classList.remove('active');
-          clearInterval(this.interval);
-        },
-        updateUI() {
-          const total = this.maxFrames();
-          masterFrame.textContent = total ? `${this.frame + 1} / ${total}` : '';
-        },
-      };
-
-      masterPrev.addEventListener('click', () => { ms.pause(); ms.go(ms.frame - 1); });
-      masterNext.addEventListener('click', () => { ms.pause(); ms.go(ms.frame + 1); });
-      masterPlay.addEventListener('click', () => {
-        if (ms.playing) { ms.pause(); return; }
-        if (ms.frame >= ms.maxFrames() - 1) ms.go(0);
-        ms.play();
-      });
-      masterSpeed.addEventListener('input', () => {
-        if (ms.playing) { clearInterval(ms.interval); ms.interval = setInterval(() => {
-          if (ms.frame >= ms.maxFrames() - 1) { ms.pause(); return; }
-          ms.go(ms.frame + 1);
-        }, ms.getDelay()); }
-      });
-
-      _masterVizMap.set(container, ms);
+      createMasterController(container, btnContainer);
       // ───────────────────────────────────────────────────────────────────────
 
       const firstCode = container.querySelector('.code-block-wrap');
@@ -2902,6 +3030,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       attachRunButtons(d);
       renderMermaid(d);
       renderExcalidraw(d);
+      hydrateVizRefs(d);
       return d;
     }
 
@@ -2917,7 +3046,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     liveContent.addEventListener('mousedown', e => {
       if (e.target.closest('.excalidraw-wrap')) return;
       const el = e.target.closest('[data-seg]');
-      if (!el || e.target.closest('.run-btn') || e.target.closest('.sort-viz') || e.target.closest('.action-buttons') || e.target.closest('.master-viz-ctrl')) return;
+      if (!el || e.target.closest('.run-btn') || e.target.closest('.sort-viz') || e.target.closest('.action-buttons') || e.target.closest('.master-viz-ctrl') || e.target.closest('.viz-ref')) return;
       const idx = +el.dataset.seg;
       if (el.classList.contains('live-spacer') || el.classList.contains('live-bottom')) {
         nextActiveIdx = nearestBlock(idx, -1) ?? nearestBlock(idx, 1);
@@ -2928,7 +3057,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
     liveContent.addEventListener('click', e => {
       if (e.target.closest('.excalidraw-wrap')) return;
       const el = e.target.closest('[data-seg]');
-      if (!el || e.target.closest('.run-btn') || e.target.closest('.sort-viz') || e.target.closest('.action-buttons') || e.target.closest('.master-viz-ctrl')) return;
+      if (!el || e.target.closest('.run-btn') || e.target.closest('.sort-viz') || e.target.closest('.action-buttons') || e.target.closest('.master-viz-ctrl') || e.target.closest('.viz-ref')) return;
       if (liveActiveIdx !== null) return;
       const idx = +el.dataset.seg;
       if (el.classList.contains('live-spacer') || el.classList.contains('live-bottom')) {
@@ -3540,6 +3669,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       slide.appendChild(div);
       slidesContent.insertBefore(slide, slidesArrowRight);
 
+      hydrateVizRefs(div);
       addActionButtons(slide);
 
       slidesPrev.disabled = idx === 0;
