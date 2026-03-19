@@ -605,7 +605,7 @@
     .code-output .out-meta { color: var(--text-muted); font-style: italic; font-size: 12px; }
 
     /* ── Pybook (Python notebooks) ── */
-    .pybook-output img.pybook-plot { display: block; max-width: 100%; margin: 8px 0; border-radius: 4px; }
+    .pybook-output img.pybook-plot { display: block; max-width: 100%; margin: 8px 0; border-radius: 4px; border: 1px solid var(--border); }
     .pybook-loading { font-size: 12px; color: var(--text-muted); padding: 4px 0; }
 
     /* ── Sort visualizer ── */
@@ -759,6 +759,7 @@
       <button class="btn" id="settingsBtn">&#9881;</button>
       <div class="settings-menu" id="settingsMenu">
         <label><input type="checkbox" id="showWordCount"> Word count &amp; reading time</label>
+        <label><input type="checkbox" id="syncScroll"> Sync scroll (split mode)</label>
       </div>
     </div>
     <button class="btn" id="foldBtn" style="display:none" title="Fold/unfold Excalidraw blocks">Fold ◆</button>
@@ -1674,6 +1675,72 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
 
     // ── Master viz sync ──────────────────────────────────────────────────────
     const _masterVizMap = new WeakMap(); // container el → masterState
+
+    // ── Sync scroll ───────────────────────────────────────────────────────────
+    let _syncScrollEnabled = false;
+    let _syncScrollMap = null;  // [{e: editorPx, p: previewPx}, ...] sorted by e
+    let _syncScrollLock = false;
+
+    function buildSyncScrollMap() {
+      if (!_syncScrollEnabled) return;
+      const lines = editor.value.split('\n');
+      const totalLines = lines.length;
+      if (totalLines === 0) { _syncScrollMap = null; return; }
+
+      // Find block-start line indices (non-empty line after blank or at start, skip inside fences)
+      const blockLines = [];
+      let inFence = false;
+      for (let i = 0; i < totalLines; i++) {
+        if (/^`{3}/.test(lines[i])) inFence = !inFence;
+        if (!inFence && lines[i].trim() !== '' && (i === 0 || lines[i - 1].trim() === '')) {
+          blockLines.push(i);
+        }
+      }
+
+      // Preview first-level children (skip ui overlays)
+      const previewEls = Array.from(preview.children).filter(el =>
+        !el.classList.contains('action-buttons') && el.offsetHeight > 0
+      );
+
+      const editorMax = Math.max(1, editor.scrollHeight - editor.clientHeight);
+      const previewMax = Math.max(1, preview.scrollHeight - preview.clientHeight);
+      const lineSpans = lineNums.children; // per-line height spans, offsetTop = px offset of each line
+
+      const map = [{ e: 0, p: 0 }];
+
+      const count = Math.min(blockLines.length, previewEls.length);
+      for (let i = 0; i < count; i++) {
+        const li = blockLines[i];
+        // Editor pixel offset: use lineNums span for accurate word-wrap height
+        const eTop = (lineSpans[li] ? lineSpans[li].offsetTop : (li / totalLines) * editor.scrollHeight);
+
+        // Preview element pixel offset relative to preview scroll container
+        const previewRect = preview.getBoundingClientRect();
+        const elRect = previewEls[i].getBoundingClientRect();
+        const pTop = elRect.top - previewRect.top + preview.scrollTop;
+
+        map.push({ e: Math.min(eTop, editorMax), p: Math.min(pTop, previewMax) });
+      }
+
+      map.push({ e: editorMax, p: previewMax });
+
+      // Sort by editor position, remove duplicate e values
+      _syncScrollMap = map
+        .sort((a, b) => a.e - b.e)
+        .filter((v, i, arr) => i === 0 || v.e > arr[i - 1].e);
+    }
+
+    function _syncInterpolate(map, fromKey, toKey, val) {
+      for (let i = 0; i < map.length - 1; i++) {
+        const a = map[i], b = map[i + 1];
+        if (val <= b[fromKey]) {
+          const range = b[fromKey] - a[fromKey];
+          const t = range > 0 ? (val - a[fromKey]) / range : 0;
+          return a[toKey] + t * (b[toKey] - a[toKey]);
+        }
+      }
+      return map[map.length - 1][toKey];
+    }
     const _vizFrameStore = new Map();   // vizId → { frames }
 
     // ── Pyodide (client-side Python) ─────────────────────────────────────────
@@ -1704,7 +1771,7 @@ _litbin_plots = []
 def _litbin_show_override():
     import matplotlib.pyplot as plt
     buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight', dpi=96, facecolor='none')
+    plt.savefig(buf, format='png', bbox_inches='tight', dpi=96, facecolor='#f3f4f6')
     buf.seek(0)
     import base64
     _litbin_plots.append(base64.b64encode(buf.read()).decode())
@@ -2821,7 +2888,24 @@ except (ImportError, Exception):
     }
 
     editor.addEventListener('input', updateLineNums);
-    editor.addEventListener('scroll', () => { lineNums.scrollTop = editor.scrollTop; });
+    editor.addEventListener('scroll', () => {
+      lineNums.scrollTop = editor.scrollTop;
+      if (!_syncScrollEnabled || _syncScrollLock || !_syncScrollMap) return;
+      const p = _syncInterpolate(_syncScrollMap, 'e', 'p', editor.scrollTop);
+      _syncScrollLock = true;
+      preview.scrollTop = p;
+      setTimeout(() => { _syncScrollLock = false; }, 50);
+    });
+
+    preview.addEventListener('scroll', () => {
+      if (!_syncScrollEnabled || _syncScrollLock || !_syncScrollMap) return;
+      const e = _syncInterpolate(_syncScrollMap, 'p', 'e', preview.scrollTop);
+      _syncScrollLock = true;
+      editor.scrollTop = e;
+      lineNums.scrollTop = e;
+      setTimeout(() => { _syncScrollLock = false; }, 50);
+    });
+
     new ResizeObserver(updateLineNums).observe(editor);
 
     // ── Render ───────────────────────────────────────────────────────────────
@@ -2852,6 +2936,8 @@ except (ImportError, Exception):
       updateLineNums();
       addActionButtons(preview);
       hydrateVizRefs(preview);
+      // Rebuild after layout settles (mermaid/excalidraw may resize asynchronously)
+      if (_syncScrollEnabled) requestAnimationFrame(buildSyncScrollMap);
     }
 
     function addActionButtons(container) {
@@ -2890,6 +2976,7 @@ except (ImportError, Exception):
     const settingsBtn  = document.getElementById('settingsBtn');
     const settingsMenu = document.getElementById('settingsMenu');
     const showWordCount = document.getElementById('showWordCount');
+    const syncScrollCb  = document.getElementById('syncScroll');
     const wordCountEl  = document.getElementById('wordCount');
 
     settingsBtn.addEventListener('click', e => {
@@ -2903,6 +2990,15 @@ except (ImportError, Exception):
     showWordCount.addEventListener('change', () => {
       localStorage.setItem('litbin-wordcount', showWordCount.checked ? '1' : '0');
       updateWordCount();
+    });
+
+    syncScrollCb.checked = localStorage.getItem('litbin-syncscroll') === '1';
+    _syncScrollEnabled = syncScrollCb.checked;
+    syncScrollCb.addEventListener('change', () => {
+      _syncScrollEnabled = syncScrollCb.checked;
+      localStorage.setItem('litbin-syncscroll', _syncScrollEnabled ? '1' : '0');
+      if (_syncScrollEnabled) buildSyncScrollMap();
+      else _syncScrollMap = null;
     });
 
     function updateWordCount() {
@@ -3751,6 +3847,7 @@ except (ImportError, Exception):
       liveHandleObserver = new MutationObserver(() => requestAnimationFrame(positionHandles));
       liveHandleObserver.observe(livePane, { attributes: true, attributeFilter: ['style'] });
       window.addEventListener('resize', positionHandles);
+      window.addEventListener('resize', () => { if (_syncScrollEnabled) buildSyncScrollMap(); });
       livePane.addEventListener('scroll', positionHandles);
 
       let resizing = null;
