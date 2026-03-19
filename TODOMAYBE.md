@@ -31,6 +31,7 @@ Ideas for future improvements. None are committed to.
 - ~~**Lit variable system**~~ — `data` blocks + `{varname}` injection + `random()` metafunction
 - ~~**Video / media embedding**~~ — bare YouTube/Vimeo URLs auto-embed as iframes; `.mp4/.webm/.ogv` URLs embed as `<video>`; handled in marked paragraph renderer
 - ~~**Live content-width resize handles**~~ — drag handles on left/right edges of `#liveContent` to adjust `max-width`; double-click resets to 760px; `position: fixed`, repositioned via `MutationObserver` on `livePane` style changes
+- ~~**Sort viz cross-references**~~ — `#id` on sort blocks + `viz:id` reference blocks for side-by-side algorithm comparison; auto-grouped master controls; speed slider sync
 
 ---
 
@@ -73,3 +74,50 @@ New ` ```venn ``` ` fence type. Parse syntax: `A = {1,2,3}`, `B = {3,4,5}`, opti
 
 ### Live collaboration rooms — *High*
 P2P editing via WebRTC using PeerJS (free public signaling, no backend). URL structure: `?room=ROOMID#content`. Room creator generates random ID, opens PeerJS host, broadcasts editor diffs to all peers. Joiner connects, receives full doc on join, applies patches. Conflict resolution: last-write-wins with logical timestamp (simple) or OT/CRDT (complex). PeerJS public signaling is free but not guaranteed uptime.
+
+---
+
+## Everyday user ideas
+
+### Image embedding (drag/drop + paste) — *Medium*
+Drag/drop or paste an image → auto-upload to imgur or similar free host → embed `![](url)` inline. Currently no image story besides manually typing URLs. Needs: paste event handler, imgur API (anonymous upload, no auth required for <50/day), progress indicator.
+
+### Table editor — *Medium*
+Click-to-edit grid overlay on rendered markdown tables. Toolbar button to insert NxM table. Tab jumps between cells. See also "Better tables" above for editor-side improvements.
+
+### Paste formatting preservation — *Low-Medium*
+Intercept paste events containing `text/html`, convert common HTML structures (bold, italic, links, lists, headings) to markdown equivalents via simple regex/DOM walk. Drop unsupported formatting gracefully. No library needed for basic cases.
+
+### Auto-save / recent documents — *Low-Medium*
+`localStorage` snapshots on every URL sync (debounced). "Recent" menu lists last N documents with title (first `# heading` or first line) + timestamp. Click to restore. Cap storage at ~5 MB. Separate from edit history — this is document-level, not edit-level.
+
+---
+
+## Power user ideas
+
+### Python notebooks (Pyodide) — *Medium-High*
+` ```python:notebook ``` ` or ` ```pybook ``` ` fence blocks behave like Jupyter cells: run Python client-side via Pyodide (WASM), output renders inline (text, tables, matplotlib plots as inline SVG/PNG). Cells share a persistent Python session. `data` block variables injectable. No server needed.
+
+### More viz block types — *Medium-High*
+Generalize the sort visualizer pattern. `viz:plot` for charting arrays/data (line, bar, scatter — lightweight Canvas or SVG renderer). `viz:graph` for graph algorithm animation (BFS/DFS/Dijkstra with node/edge highlighting). `viz:table` for data structure state step-by-step. Each type has its own output format and renderer.
+
+### WASM code execution — *High*
+Replace Wandbox with client-side execution via WASM runtimes: Pyodide (Python), QuickJS (JS), wasm-compiled C/Rust toolchains. No rate limits, works offline, faster feedback. Fallback to Wandbox for languages without WASM runtimes. Big download on first use (~10 MB for Pyodide).
+
+### Cell-style reactive execution — *Medium*
+Jupyter-style dependency graph: `data` block outputs feed downstream code blocks, re-running upstream re-triggers downstream automatically. The lit variable system is 80% of the way there — needs execution ordering, dirty tracking, and output caching per cell.
+
+### Custom themes / CSS injection — *Low*
+` ```style ``` ` fence block injects scoped CSS into the document. Educators and speakers can brand their slides/documents. Sanitize to prevent breaking app UI (scope to `.md-body` or preview container only).
+
+### Slide speaker notes + timer — *Low-Medium*
+`<!-- notes: ... -->` HTML comments in slide content become speaker notes. "Present" opens two windows: audience view (current slide) and speaker view (current slide + notes + next slide + elapsed timer). Uses `window.open()` + `BroadcastChannel` for sync.
+
+### Document composition / includes — *Medium*
+`!include(url#hash)` directive pulls in content from another litbin URL. Fetched, decompressed, and spliced inline at render time. Enables reusable components (shared code blocks, common preambles). Cache fetched includes in `sessionStorage`.
+
+### Offline PWA — *Low-Medium*
+Service worker + `manifest.json` for installable offline app. Cache `index.html` + CDN libs on first visit. Power users giving talks or teaching with spotty wifi. Small scope: just cache everything on install, serve from cache when offline.
+
+### Vim/Emacs keybindings — *Medium*
+Toggle in settings. Vim: modal editing (normal/insert/visual modes), hjkl navigation, common commands (dd, yy, p, ciw, etc.). Emacs: C-a/C-e/C-k/C-y/M-f/M-b. Could use CodeMirror's vim/emacs extensions if we ever swap the textarea for CodeMirror, otherwise hand-roll a subset.

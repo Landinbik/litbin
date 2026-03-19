@@ -604,6 +604,10 @@
     .code-output .out-err  { color: #f85149; }
     .code-output .out-meta { color: var(--text-muted); font-style: italic; font-size: 12px; }
 
+    /* ── Pybook (Python notebooks) ── */
+    .pybook-output img.pybook-plot { display: block; max-width: 100%; margin: 8px 0; border-radius: 4px; }
+    .pybook-loading { font-size: 12px; color: var(--text-muted); padding: 4px 0; }
+
     /* ── Sort visualizer ── */
     .sort-viz { border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; background: var(--surface); padding: 12px 16px; }
     .sort-viz-controls { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
@@ -1069,6 +1073,42 @@ sort_print(disp)
 \`\`\`
 
 Click **Run all** to execute all code blocks simultaneously. Use **Master playback bar** (appears after Visualize) to step through all animations in sync.
+
+---
+
+## 🐍 Python Notebooks
+
+\`pybook\` blocks run Python **in your browser** via Pyodide (WASM). No server needed — all cells share a persistent session, just like Jupyter:
+
+\`\`\`pybook
+import math
+
+# Fibonacci with golden ratio
+phi = (1 + math.sqrt(5)) / 2
+fibs = [round(phi**n / math.sqrt(5)) for n in range(15)]
+print("Fibonacci:", fibs)
+
+# List comprehension
+primes = [n for n in range(2, 50) if all(n % i for i in range(2, int(n**0.5)+1))]
+print("Primes <50:", primes)
+\`\`\`
+
+Matplotlib plots render inline — click ▶ Run:
+
+\`\`\`pybook
+import numpy as np
+import matplotlib.pyplot as plt
+
+x = np.linspace(0, 4 * np.pi, 200)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 3))
+ax1.plot(x, np.sin(x), color='#3b82f6')
+ax1.plot(x, np.cos(x), color='#ef4444', linestyle='--')
+ax1.set_title('Trigonometric Functions')
+ax1.legend(['sin(x)', 'cos(x)'])
+ax2.bar(range(10), np.random.randint(1, 20, 10), color='#8b5cf6')
+ax2.set_title('Random Distribution')
+plt.tight_layout()
+\`\`\`
 
 ---
 
@@ -1636,6 +1676,47 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
     const _masterVizMap = new WeakMap(); // container el → masterState
     const _vizFrameStore = new Map();   // vizId → { frames }
 
+    // ── Pyodide (client-side Python) ─────────────────────────────────────────
+    let _pyodidePromise = null;
+    let _pyodideReady = false;
+
+    function getPyodide() {
+      if (!_pyodidePromise) {
+        _pyodidePromise = (async () => {
+          // Load the Pyodide script
+          if (typeof loadPyodide === 'undefined') {
+            await new Promise((resolve, reject) => {
+              const s = document.createElement('script');
+              s.src = 'https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js';
+              s.onload = resolve;
+              s.onerror = () => reject(new Error('Failed to load Pyodide'));
+              document.head.appendChild(s);
+            });
+          }
+          const pyodide = await loadPyodide({
+            indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.27.7/full/',
+          });
+          // Pre-install matplotlib support for inline plot rendering
+          await pyodide.runPythonAsync(`
+import sys, io
+# Patch for matplotlib inline rendering
+_litbin_plots = []
+def _litbin_show_override():
+    import matplotlib.pyplot as plt
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight', dpi=96, facecolor='none')
+    buf.seek(0)
+    import base64
+    _litbin_plots.append(base64.b64encode(buf.read()).decode())
+    plt.close('all')
+`);
+          _pyodideReady = true;
+          return pyodide;
+        })();
+      }
+      return _pyodidePromise;
+    }
+
     // ── Lit variable system ──────────────────────────────────────────────────
     let _litVars = {};
 
@@ -1764,6 +1845,29 @@ Fenced code blocks with a supported language tag get a **\u25ba Run** button. Ex
 - **Nim**: \`--hints:off\` applied to suppress verbose build output
 - **Common Lisp**: source must be ASCII-only (CLISP 2.49 limitation)
 - **Broken server-side on Wandbox**: OCaml, Swift, Erlang, Elixir (commented out)
+
+---
+
+## Python notebooks (Pyodide)
+
+Use \`pybook\` as the fence tag for client-side Python execution. Runs entirely in the browser via [Pyodide](https://pyodide.org/) (Python compiled to WebAssembly) — no server needed.
+
+### Features
+
+- **Persistent session** — all \`pybook\` cells share the same Python interpreter. Variables defined in one cell are available in all subsequent cells.
+- **Matplotlib plots** — \`plt.show()\` renders inline as PNG images. Auto-shows open figures at cell end.
+- **NumPy** — available via \`import numpy\`. Loaded on demand from CDN.
+- **First run** — downloads the Pyodide runtime (~4 MB gzipped). Subsequent runs are instant.
+
+### Differences from server-side Python
+
+| | \`python\` (Wandbox) | \`pybook\` (Pyodide) |
+|---|---|---|
+| Execution | Server | Browser (WASM) |
+| Persistent state | No | Yes (shared session) |
+| Matplotlib | No | Inline plots |
+| NumPy | No | Available |
+| Offline | No | Yes (after first load) |
 
 ---
 
@@ -2045,6 +2149,105 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       btn.textContent = '▶ Run';
     }
 
+    async function executePybook(code, outEl, btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ Loading Pyodide…';
+      outEl.className = 'code-output pybook-output visible';
+      outEl.innerHTML = '<span class="out-meta">Loading Python runtime…</span>';
+
+      try {
+        const pyodide = await getPyodide();
+        btn.textContent = '⏳';
+        outEl.innerHTML = '<span class="out-meta">Loading packages…</span>';
+
+        // Reset stdout capture and plot list
+        await pyodide.runPythonAsync(`
+sys.stdout = io.StringIO()
+sys.stderr = io.StringIO()
+_litbin_plots = []
+# Patch matplotlib.pyplot.show if matplotlib is loaded
+if 'matplotlib.pyplot' in sys.modules:
+    sys.modules['matplotlib.pyplot'].show = _litbin_show_override
+`);
+
+        // Auto-load packages referenced in imports (numpy, matplotlib, etc.)
+        await pyodide.loadPackagesFromImports(code);
+        outEl.innerHTML = '<span class="out-meta">Running…</span>';
+
+        // Try to patch matplotlib.pyplot.show before user code if they import it
+        const patchedCode = `
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    plt.show = _litbin_show_override
+except ImportError:
+    pass
+${code}
+# Auto-show any open figures
+try:
+    import matplotlib.pyplot as plt
+    if plt.get_fignums():
+        _litbin_show_override()
+except (ImportError, Exception):
+    pass
+`;
+
+        try {
+          await pyodide.runPythonAsync(patchedCode);
+        } catch(pyErr) {
+          // Python exception — still capture stdout, show error
+          const stderr = await pyodide.runPython('sys.stderr.getvalue()');
+          outEl.innerHTML = '';
+          const stdout = await pyodide.runPython('sys.stdout.getvalue()');
+          if (stdout) {
+            const el = document.createElement('span');
+            el.textContent = stdout;
+            outEl.appendChild(el);
+          }
+          const errEl = document.createElement('span');
+          errEl.className = 'out-err';
+          errEl.textContent = pyErr.message || String(pyErr);
+          outEl.appendChild(errEl);
+          btn.disabled = false;
+          btn.textContent = '▶ Run';
+          return;
+        }
+
+        const stdout = await pyodide.runPython('sys.stdout.getvalue()');
+        const plots = await pyodide.runPython('_litbin_plots');
+        const plotList = plots.toJs ? plots.toJs() : [];
+
+        outEl.innerHTML = '';
+
+        if (stdout) {
+          const el = document.createElement('span');
+          el.textContent = stdout;
+          outEl.appendChild(el);
+        }
+
+        // Render matplotlib plots as inline images
+        if (plotList.length > 0) {
+          plotList.forEach(b64 => {
+            const img = document.createElement('img');
+            img.src = 'data:image/png;base64,' + b64;
+            img.className = 'pybook-plot';
+            outEl.appendChild(img);
+          });
+        }
+
+        if (!stdout && plotList.length === 0) {
+          outEl.innerHTML = '<span class="out-meta">(no output)</span>';
+        }
+
+      } catch(err) {
+        outEl.innerHTML = `<span class="out-err">Error: ${err.message}</span>`;
+      }
+
+      btn.disabled = false;
+      btn.textContent = '▶ Run';
+    }
+
     function attachRunButtons(container) {
       container.querySelectorAll('pre code').forEach(codeEl => {
         const langClass = [...codeEl.classList].find(c => c.startsWith('language-'));
@@ -2053,9 +2256,10 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
 
         // Detect sort:LANG pattern via data attr (set in render) or class
         const isSort = !!codeEl.dataset.sortLang;
+        const isPybook = !!codeEl.dataset.pybook;
         const lang = isSort ? codeEl.dataset.sortLang : rawLang;
 
-        if (!EXEC_LANGS[lang.toLowerCase()]) return;
+        if (!isPybook && !EXEC_LANGS[lang.toLowerCase()]) return;
 
         const pre  = codeEl.parentElement;
         const wrap = document.createElement('div');
@@ -2084,7 +2288,9 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         const varRefs = codeEl.dataset.litVars ? codeEl.dataset.litVars.split(',').filter(Boolean) : [];
 
         btn.addEventListener('click', async () => {
-          if (isSort) {
+          if (isPybook) {
+            await executePybook(codeEl.textContent, outEl, btn);
+          } else if (isSort) {
             await executeSortCode(lang, codeEl.textContent, outEl, wrap, btn, varRefs);
           } else {
             await executeCode(lang, codeEl.textContent, outEl, btn, varRefs);
@@ -2631,6 +2837,12 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
           el.classList.add('language-' + m[2]);
         }
       });
+      // pybook → python for hljs highlighting
+      preview.querySelectorAll('pre code.language-pybook').forEach(el => {
+        el.dataset.pybook = '1';
+        el.classList.remove('language-pybook');
+        el.classList.add('language-python');
+      });
       if (typeof hljs !== 'undefined')
         preview.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw):not(.hljs)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(preview);
@@ -3025,6 +3237,11 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
           el.classList.add('language-' + m[2]);
         }
       });
+      d.querySelectorAll('pre code.language-pybook').forEach(el => {
+        el.dataset.pybook = '1';
+        el.classList.remove('language-pybook');
+        el.classList.add('language-python');
+      });
       if (typeof hljs !== 'undefined')
         d.querySelectorAll('pre code:not(.hljs)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(d);
@@ -3296,6 +3513,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         { label: 'Data block',               icon: '{}',   text: '```data\narr = []\n```' },
         { label: 'Sort visualizer — Python', icon: '▶py',  text: '```sort:python\n\n```' },
         { label: 'Sort visualizer — Lisp',   icon: '▶lsp', text: '```sort:lisp\n\n```' },
+        { label: 'Python notebook cell',     icon: '🐍',   text: '```pybook\n\n```' },
         { label: 'Code — Python',            icon: 'py',   text: '```python\n\n```' },
         { label: 'Code — JavaScript',        icon: 'js',   text: '```javascript\n\n```' },
         { label: 'Code — TypeScript',        icon: 'ts',   text: '```typescript\n\n```' },
@@ -3655,6 +3873,11 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
           el.classList.remove('language-sort' + m[1] + m[2]);
           el.classList.add('language-' + m[2]);
         }
+      });
+      div.querySelectorAll('pre code.language-pybook').forEach(el => {
+        el.dataset.pybook = '1';
+        el.classList.remove('language-pybook');
+        el.classList.add('language-python');
       });
       if (typeof hljs !== 'undefined')
         div.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw):not(.hljs)').forEach(el => hljs.highlightElement(el));
