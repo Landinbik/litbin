@@ -1315,7 +1315,7 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
         const url = location.origin + location.pathname + '?view' + location.hash;
         history.replaceState(null, '', url);
       } else {
-        history.replaceState(null, '', location.hash || location.href.replace(location.search, ''));
+        history.replaceState(null, '', location.hash || '/');
       }
     }
 
@@ -1332,10 +1332,12 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
       const badge = document.getElementById('embedBadge');
       badge.href = location.origin + location.pathname + '?view' + location.hash;
       badge.style.display = 'block';
+      const _embedTargetOrigin = document.referrer ? new URL(document.referrer).origin : '*';
       function postHeight() {
-        window.parent.postMessage({ type: 'litbin-resize', height: document.documentElement.scrollHeight }, '*');
+        window.parent.postMessage({ type: 'litbin-resize', height: document.documentElement.scrollHeight }, _embedTargetOrigin);
       }
-      new ResizeObserver(postHeight).observe(document.getElementById('preview'));
+      const _embedResizeObserver = new ResizeObserver(postHeight);
+      _embedResizeObserver.observe(document.getElementById('preview'));
       setTimeout(postHeight, 500);
     }
 
@@ -1477,6 +1479,11 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
       }});
     })();
 
+    // ── HTML escaping utility ────────────────────────────────────────────────
+    function escHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     // ── Custom code renderer (data blocks + lit-var injection) ───────────────
     marked.use({ renderer: {
       code(code, lang, escaped) {
@@ -1500,7 +1507,7 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
                 else if (typeof v === 'boolean') type = 'bool';
               } catch(e) {}
             }
-            return `<tr><td>${lm[1]}</td><td>${type}</td><td>${rawVal}</td></tr>`;
+            return `<tr><td>${escHtml(lm[1])}</td><td>${type}</td><td>${escHtml(rawVal)}</td></tr>`;
           }).filter(Boolean).join('');
           return `<div class="lit-data-block"><div class="lit-data-label">data</div><table class="lit-data-table">${rows}</table></div>`;
         }
@@ -2260,7 +2267,11 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       const spec = EXEC_LANGS[lang.toLowerCase()];
       if (!spec) return;
 
-      _litVars = extractLitVars(getEditorContent());
+      if (!_litVars) _litVars = extractLitVars(getEditorContent());
+      if (btn._abortCtrl) btn._abortCtrl.abort();
+      const controller = new AbortController();
+      btn._abortCtrl = controller;
+
       btn.disabled    = true;
       btn.textContent = '⏳';
       outEl.className = 'code-output visible';
@@ -2273,6 +2284,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
         const res = await fetch('https://wandbox.org/api/compile.json', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal:  controller.signal,
           body:    JSON.stringify({
             compiler: spec.compiler,
             code:     finalCode,
@@ -2320,7 +2332,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
           outEl.appendChild(el);
         }
       } catch(err) {
-        outEl.innerHTML = `<span class="out-err">Error: ${err.message}</span>`;
+        { const e = document.createElement('span'); e.className = 'out-err'; e.textContent = 'Error: ' + err.message; outEl.innerHTML = ''; outEl.appendChild(e); outEl.className = 'code-output visible'; }
       }
 
       btn.disabled    = false;
@@ -2419,7 +2431,7 @@ except (ImportError, Exception):
         }
 
       } catch(err) {
-        outEl.innerHTML = `<span class="out-err">Error: ${err.message}</span>`;
+        { const e = document.createElement('span'); e.className = 'out-err'; e.textContent = 'Error: ' + err.message; outEl.innerHTML = ''; outEl.appendChild(e); outEl.className = 'code-output visible'; }
       }
 
       btn.disabled = false;
@@ -2889,7 +2901,11 @@ except (ImportError, Exception):
       const spec = EXEC_LANGS[lang.toLowerCase()];
       if (!spec) return;
 
-      _litVars = extractLitVars(getEditorContent());
+      if (!_litVars) _litVars = extractLitVars(getEditorContent());
+      if (btn._abortCtrl) btn._abortCtrl.abort();
+      const controller = new AbortController();
+      btn._abortCtrl = controller;
+
       btn.disabled = true;
       btn.textContent = '⏳';
       outEl.className = 'code-output visible';
@@ -2903,6 +2919,7 @@ except (ImportError, Exception):
         const res = await fetch('https://wandbox.org/api/compile.json', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             compiler: spec.compiler,
             code: (() => {
@@ -2962,7 +2979,7 @@ except (ImportError, Exception):
           outEl.appendChild(el);
         }
       } catch(err) {
-        outEl.innerHTML = `<span class="out-err">Error: ${err.message}</span>`;
+        { const e = document.createElement('span'); e.className = 'out-err'; e.textContent = 'Error: ' + err.message; outEl.innerHTML = ''; outEl.appendChild(e); outEl.className = 'code-output visible'; }
       }
 
       btn.disabled = false;
@@ -3004,11 +3021,7 @@ except (ImportError, Exception):
       if (_syncScrollEnabled) _syncEditorToPreview();
     });
 
-    preview.addEventListener('scroll', () => {
-      // One-directional: editor drives preview. Preview scroll does NOT
-      // drive editor — prevents feedback-loop drift.
-    });
-
+    // One-directional sync: editor drives preview only — no reverse sync to avoid feedback-loop drift.
     new ResizeObserver(updateLineNums).observe(editor);
 
     // ── Render ───────────────────────────────────────────────────────────────
@@ -3033,7 +3046,7 @@ except (ImportError, Exception):
       if (typeof hljs !== 'undefined')
         preview.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw):not(.hljs)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(preview);
-      renderMermaid(preview);
+      renderMermaid(preview).catch(err => console.warn('Mermaid render failed:', err));
       renderExcalidraw(preview);
       updateWordCount();
       updateLineNums();
@@ -3344,6 +3357,11 @@ except (ImportError, Exception):
     importFile.addEventListener('change', () => {
       const file = importFile.files[0];
       if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        showToast(`File too large (${(file.size / 1024).toFixed(0)} KB). Limit is 2 MB.`);
+        importFile.value = '';
+        return;
+      }
       const reader = new FileReader();
       reader.onload = async e => {
         editor.value = e.target.result;
@@ -3418,19 +3436,20 @@ except (ImportError, Exception):
     const liveContent = document.getElementById('liveContent');
     const mainEl      = document.querySelector('main');
 
-    let liveMode      = false;
-    let liveSegs      = [];
-    let liveActiveIdx = null; // index of active block seg (always type:'block')
-    let nextActiveIdx = null; // set on mousedown so blur knows where to go next
-    let liveCursorPos = null; // cursor position to restore after re-render
-    let _dragSrcIdx   = null; // segment index being dragged
+    let liveMode              = false;
+    let liveSegs              = [];
+    let liveActiveIdx         = null; // index of active block seg (always type:'block')
+    let nextActiveIdx         = null; // set on mousedown so blur knows where to go next
+    let liveCursorPos         = null; // cursor position to restore after re-render
+    let _dragSrcIdx           = null; // segment index being dragged
+    let _liveRenderInProgress = false; // re-entrancy guard: prevents blur from re-triggering renderLive()
 
     function segmentize(md) {
       const lines = md.split('\n');
       const segs = [];
       let cur = [], fence = false;
       for (const line of lines) {
-        if (/^\s*```/.test(line)) fence = !fence;
+        if (/^\s*(`{3,}|~{3,})/.test(line)) fence = !fence;
         if (!fence && line === '') {
           if (cur.length) { segs.push({ type: 'block', text: cur.join('\n') }); cur = []; }
           segs.push({ type: 'blank' });
@@ -3472,7 +3491,7 @@ except (ImportError, Exception):
       if (typeof hljs !== 'undefined')
         d.querySelectorAll('pre code:not(.hljs)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(d);
-      renderMermaid(d);
+      renderMermaid(d).catch(err => console.warn('Mermaid render failed:', err));
       renderExcalidraw(d);
       hydrateVizRefs(d);
       return d;
@@ -3483,8 +3502,6 @@ except (ImportError, Exception):
       nextActiveIdx = null;
       renderLive();
     }
-
-    let _rendering = false;
 
     // Event delegation for spacers, blocks, and bottom pad — avoids per-element listeners
     liveContent.addEventListener('mousedown', e => {
@@ -3512,7 +3529,7 @@ except (ImportError, Exception):
     });
 
     function renderLive() {
-      _rendering = true;
+      _liveRenderInProgress = true;
       liveContent.classList.remove('has-viz-inline');
       _masterVizMap.delete(liveContent);
       liveContent.innerHTML = '';
@@ -3614,7 +3631,7 @@ except (ImportError, Exception):
           });
 
           ta.addEventListener('blur', () => {
-            if (_rendering) return;
+            if (_liveRenderInProgress) return;
             liveSegs[i] = { type: 'block', text: ta.value };
             liveActiveIdx = nextActiveIdx;
             nextActiveIdx = null;
@@ -3711,7 +3728,7 @@ except (ImportError, Exception):
       liveContent.appendChild(bottom);
 
       addActionButtons(liveContent);
-      _rendering = false;
+      _liveRenderInProgress = false;
     }
 
     let liveDebounce;
@@ -4111,7 +4128,7 @@ except (ImportError, Exception):
       if (typeof hljs !== 'undefined')
         div.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw):not(.hljs)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(div);
-      renderMermaid(div);
+      renderMermaid(div).catch(err => console.warn('Mermaid render failed:', err));
       renderExcalidraw(div);
 
       const oldSlide = slidesContent.querySelector('.slides-slide');
