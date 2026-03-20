@@ -2996,21 +2996,26 @@ except (ImportError, Exception):
       editorMirror.style.width = editor.clientWidth + 'px';
       editorMirror.style.boxSizing = cs.boxSizing;
 
-      // Measure each line's wrapped height using the mirror
+      // Write phase: append all line divs in one DocumentFragment (single reflow trigger)
       const lines = editor.value.split('\n');
-      editorMirror.innerHTML = '';
-      const spans = lines.map(line => {
+      const fragment = document.createDocumentFragment();
+      for (const line of lines) {
         const span = document.createElement('div');
         span.textContent = line || '\u200b'; // zero-width space for empty lines
-        editorMirror.appendChild(span);
-        return span;
-      });
+        fragment.appendChild(span);
+      }
+      editorMirror.innerHTML = '';
+      editorMirror.appendChild(fragment);
+
+      // Read phase: batch-read all offsetHeights after a single layout pass
+      // (Array.from with a map function reads all values in one sweep, avoiding
+      // the O(N) forced-reflow-per-read that a forEach/for loop would cause)
+      const heights = Array.from(editorMirror.children, el => el.offsetHeight);
 
       // Build line number elements with matching heights
       let html = '';
-      for (let i = 0; i < spans.length; i++) {
-        const h = spans[i].offsetHeight;
-        html += `<span class="line-num" style="height:${h}px">${i + 1}</span>`;
+      for (let i = 0; i < heights.length; i++) {
+        html += `<span class="line-num" style="height:${heights[i]}px">${i + 1}</span>`;
       }
       lineNums.innerHTML = html;
     }
