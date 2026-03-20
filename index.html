@@ -3024,25 +3024,29 @@ except (ImportError, Exception):
     // One-directional sync: editor drives preview only — no reverse sync to avoid feedback-loop drift.
     new ResizeObserver(updateLineNums).observe(editor);
 
-    // ── Render ───────────────────────────────────────────────────────────────
-    function render() {
-      _litVars = extractLitVars(editor.value);
-      preview.innerHTML = marked.parse(editor.value);
-      // Fix sort:LANG — swap class for hljs, preserve original in data attr
-      preview.querySelectorAll('pre code[class*="language-sort"]').forEach(el => {
+    // ── Post-process code blocks (shared by render, parsedDiv, renderSlide) ──
+    // Fixes sort:LANG class for hljs and marks pybook blocks — extracted to
+    // eliminate the same 12-line block that was copy-pasted in 3 places.
+    function postProcessCodeBlocks(container) {
+      container.querySelectorAll('pre code[class*="language-sort"]').forEach(el => {
         const m = el.className.match(/language-sort([:-])(\S+)/);
-        if (m) {
-          el.dataset.sortLang = m[2];
-          el.classList.remove('language-sort' + m[1] + m[2]);
-          el.classList.add('language-' + m[2]);
-        }
+        if (!m) return;
+        el.dataset.sortLang = m[2];
+        el.classList.remove('language-sort' + m[1] + m[2]);
+        el.classList.add('language-' + m[2]);
       });
-      // pybook → python for hljs highlighting
-      preview.querySelectorAll('pre code.language-pybook').forEach(el => {
+      container.querySelectorAll('pre code.language-pybook').forEach(el => {
         el.dataset.pybook = '1';
         el.classList.remove('language-pybook');
         el.classList.add('language-python');
       });
+    }
+
+    // ── Render ───────────────────────────────────────────────────────────────
+    function render() {
+      _litVars = extractLitVars(editor.value);
+      preview.innerHTML = marked.parse(editor.value);
+      postProcessCodeBlocks(preview);
       if (typeof hljs !== 'undefined')
         preview.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw):not(.hljs)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(preview);
@@ -3475,19 +3479,7 @@ except (ImportError, Exception):
     function parsedDiv(md) {
       const d = document.createElement('div');
       d.innerHTML = marked.parse(md || '\u200b');
-      d.querySelectorAll('pre code[class*="language-sort"]').forEach(el => {
-        const m = el.className.match(/language-sort([:-])(\S+)/);
-        if (m) {
-          el.dataset.sortLang = m[2];
-          el.classList.remove('language-sort' + m[1] + m[2]);
-          el.classList.add('language-' + m[2]);
-        }
-      });
-      d.querySelectorAll('pre code.language-pybook').forEach(el => {
-        el.dataset.pybook = '1';
-        el.classList.remove('language-pybook');
-        el.classList.add('language-python');
-      });
+      postProcessCodeBlocks(d);
       if (typeof hljs !== 'undefined')
         d.querySelectorAll('pre code:not(.hljs)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(d);
@@ -3823,12 +3815,14 @@ except (ImportError, Exception):
       cmdActiveIdx = idx;
       const rows = cmdListEl.querySelectorAll('.cmd-item');
       let rowIdx = 0;
+      let activeRowIdx = -1;
       items.forEach((it, i) => {
         if (it._section) return;
         rows[rowIdx]?.classList.toggle('active', i === idx);
+        if (i === idx) activeRowIdx = rowIdx;
         rowIdx++;
       });
-      cmdListEl.querySelectorAll('.cmd-item')[rowIdx - 1]?.scrollIntoView?.({ block: 'nearest' });
+      if (activeRowIdx >= 0) rows[activeRowIdx]?.scrollIntoView?.({ block: 'nearest' });
     }
 
     function execCmd(it) {
@@ -3950,17 +3944,23 @@ except (ImportError, Exception):
     }
 
     function replaceAll() {
-      let count = 0;
       const q = frFindEl.value;
       const r = frReplaceEl.value;
       if (!q) return;
+      // Re-run find to get fresh case-insensitive match list, then replace using
+      // actual offsets (walk in reverse to keep earlier indices stable).
+      findMatches(q);
+      if (!frMatches.length) { frStatusEl.textContent = 'No matches'; return; }
+      const count = frMatches.length;
       let newVal = editor.value;
-      newVal = newVal.split(q).join(r);
+      for (let i = frMatches.length - 1; i >= 0; i--) {
+        const m = frMatches[i];
+        newVal = newVal.slice(0, m.start) + r + newVal.slice(m.end);
+      }
       editor.value = newVal;
-      count = frMatches.length;
       frMatches = [];
       frCurrentIdx = -1;
-      frStatusEl.textContent = count ? `Replaced ${count}` : 'No matches';
+      frStatusEl.textContent = `Replaced ${count}`;
       updateLineNums();
       editor.dispatchEvent(new Event('input'));
     }
@@ -4112,19 +4112,7 @@ except (ImportError, Exception):
 
       const div = document.createElement('div');
       div.innerHTML = marked.parse(slidesArray[idx]);
-      div.querySelectorAll('pre code[class*="language-sort"]').forEach(el => {
-        const m = el.className.match(/language-sort([:-])(\S+)/);
-        if (m) {
-          el.dataset.sortLang = m[2];
-          el.classList.remove('language-sort' + m[1] + m[2]);
-          el.classList.add('language-' + m[2]);
-        }
-      });
-      div.querySelectorAll('pre code.language-pybook').forEach(el => {
-        el.dataset.pybook = '1';
-        el.classList.remove('language-pybook');
-        el.classList.add('language-python');
-      });
+      postProcessCodeBlocks(div);
       if (typeof hljs !== 'undefined')
         div.querySelectorAll('pre code:not(.language-mermaid):not(.language-excalidraw):not(.hljs)').forEach(el => hljs.highlightElement(el));
       attachRunButtons(div);
