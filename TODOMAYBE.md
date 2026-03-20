@@ -32,6 +32,7 @@ Ideas for future improvements. None are committed to.
 - ~~**Video / media embedding**~~ — bare YouTube/Vimeo URLs auto-embed as iframes; `.mp4/.webm/.ogv` URLs embed as `<video>`; handled in marked paragraph renderer
 - ~~**Live content-width resize handles**~~ — drag handles on left/right edges of `#liveContent` to adjust `max-width`; double-click resets to 760px; `position: fixed`, repositioned via `MutationObserver` on `livePane` style changes
 - ~~**Sort viz cross-references**~~ — `#id` on sort blocks + `viz:id` reference blocks for side-by-side algorithm comparison; auto-grouped master controls; speed slider sync
+- ~~**Embeddable fragments**~~ — `?embed` URL param hides all chrome; only rendered preview shown; "powered by litbin" badge links to `?view`; `postMessage` height sync for iframe auto-resize; `?embed&theme=dark|light` forces theme; "Embed" button opens modal with `<iframe>` + auto-resize script snippet; Excalidraw read-only in embed mode
 
 ---
 

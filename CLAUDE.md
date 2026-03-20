@@ -32,7 +32,7 @@ No Node.js, no npm, no build. Open `index.html` directly in a browser or serve w
 
 ## Architecture
 
-Everything lives in `index.html` (~3,550 lines):
+Everything lives in `index.html` (~4,200 lines):
 
 1. **CSS** — custom properties for light/dark theming, responsive split-pane layout, sort visualizer, docs modal
 2. **HTML** — header bar (buttons, settings, URL size), docs modal overlay, mobile tab bar, split `main` with editor pane + divider + preview pane, live mode pane
@@ -79,6 +79,24 @@ Obsidian-style block editing. Markdown is segmented into blocks (separated by bl
 - Side-by-side code + sort visualizer layout
 - Content-width resize handles: fixed handles on left/right edges of `#liveContent`, drag to adjust `max-width`, double-click resets to 760px; positioned via `getBoundingClientRect()` and resynced via MutationObserver on `livePane` style changes
 - `syncFromLive()` uses its own `liveDebounce` timer (separate from editor's `urlDebounce`)
+
+## Embed mode
+
+Embeds rendered litbin content into other websites via `<iframe>`.
+
+- `?embed` URL param → `body.embed` class → hides all chrome (header, editor, tabs, overlays)
+- Only the rendered preview is shown; `body.embed` CSS rules suppress everything else via `!important`
+- "powered by litbin" badge (`.embed-badge`) fixed bottom-right, links to `?view` version
+- `postMessage` sends `{ type: 'litbin-resize', height }` to parent frame; `ResizeObserver` on `#preview` triggers re-sends
+- `?embed&theme=dark` or `?embed&theme=light` forces theme regardless of system preference
+- `setHash()` preserves `location.search` (not just `?embed`) so `&theme=` survives hash updates
+- Excalidraw blocks render as `viewModeEnabled: true` — no `onChange` save-back in embed mode
+- "Embed" button in header opens modal (`#embedModal`) with `<iframe>` + auto-resize `<script>` snippet
+- Generated snippet uses `id="litbin-embed"` on the iframe; the inline script listens for `litbin-resize` postMessage
+- `sandbox="allow-scripts allow-same-origin allow-popups"` on generated iframes
+- Theme select in modal regenerates snippet in real-time; copy button uses `navigator.clipboard`
+- Command palette entry: "Embed / get iframe code"
+- "Embed" button hidden in viewer mode (`body.viewer #embedBtn { display: none }`)
 
 ## Presentation mode (Slides)
 

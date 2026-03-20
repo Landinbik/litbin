@@ -354,7 +354,7 @@
       background: var(--bg);
     }
     #liveContent {
-      max-width: 760px;
+      max-width: 80%;
       margin: 0 auto;
       padding: 40px 28px 160px 40px;
       width: 95%;
@@ -721,7 +721,8 @@
     body.viewer #slidesBtn,
     body.viewer #shareBtn,
     body.viewer #shortBtn,
-    body.viewer #docsBtn { display: none !important; }
+    body.viewer #docsBtn,
+    body.viewer #embedBtn { display: none !important; }
     body.viewer #editorPane,
     body.viewer #divider,
     body.viewer .pane-label { display: none !important; }
@@ -737,6 +738,40 @@
     body.slides-only .tab-bar,
     body.slides-only #livePane { display: none !important; }
     body.slides-only #slidesOverlay { z-index: 1 !important; }
+
+    /* ── Embed mode ── */
+    body.embed header,
+    body.embed .tab-bar,
+    body.embed #editorPane,
+    body.embed #divider,
+    body.embed .pane-label,
+    body.embed #livePane,
+    body.embed #docsOverlay,
+    body.embed #cmdPalette,
+    body.embed #findReplacePanel,
+    body.embed #shortcutsModal,
+    body.embed #slidesOverlay { display: none !important; }
+    body.embed { overflow: auto; }
+    body.embed main { overflow: visible; }
+    body.embed #previewPane { flex: 1 !important; overflow: visible; }
+    body.embed #preview { max-width: 860px; margin: 0 auto; padding: 24px 32px 48px; }
+    .embed-badge { position: fixed; bottom: 8px; right: 12px; font-size: 11px; color: var(--text-muted); text-decoration: none; opacity: 0.7; transition: opacity 0.15s; z-index: 100; }
+    .embed-badge:hover { opacity: 1; text-decoration: underline; }
+
+    /* ── Embed modal ── */
+    .embed-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1900; display: flex; align-items: center; justify-content: center; }
+    .embed-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; width: 620px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+    .embed-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .embed-head h3 { margin: 0; font-size: 16px; }
+    .embed-close { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; padding: 0; }
+    .embed-content { padding: 16px 20px; }
+    .embed-content label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+    .embed-options { margin-bottom: 12px; }
+    .embed-options label { display: inline; }
+    .embed-options select { margin-left: 4px; padding: 3px 6px; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); }
+    #embedSnippet { width: 100%; height: 140px; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 12px; line-height: 1.4; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); resize: vertical; margin-bottom: 10px; }
+    .embed-copy-btn { padding: 8px 16px; font-size: 13px; border: 1px solid var(--border); background: var(--accent); color: white; border-radius: 6px; cursor: pointer; }
+    .embed-copy-btn:hover { opacity: 0.9; }
 
     @media print {
       @page { margin: 1.5cm; }
@@ -772,6 +807,7 @@
     <input type="file" id="importFile" accept=".md,.txt,text/markdown,text/plain" style="display:none">
     <button class="btn" id="slidesBtn">Slides</button>
     <button class="btn" id="viewBtn">View</button>
+    <button class="btn" id="embedBtn">Embed</button>
     <button class="btn primary" id="shareBtn">Copy URL</button>
     <button class="btn" id="shortBtn">Short URL</button>
     <button class="btn" id="docsBtn" title="Documentation">?</button>
@@ -820,6 +856,27 @@
           <tr><td><code>↑ ↓</code></td><td>Navigate command palette</td><td>Palette</td></tr>
           <tr><td><code>Backspace</code> (start)</td><td>Merge with previous block</td><td>Live</td></tr>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="embed-modal" id="embedModal" style="display:none">
+    <div class="embed-box">
+      <div class="embed-head">
+        <h3>Embed this content</h3>
+        <button class="embed-close" id="embedClose">&times;</button>
+      </div>
+      <div class="embed-content">
+        <div class="embed-options">
+          <label>Theme: <select id="embedThemeSelect">
+            <option value="">Auto</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select></label>
+        </div>
+        <label>Paste into your HTML:</label>
+        <textarea id="embedSnippet" readonly spellcheck="false"></textarea>
+        <button class="embed-copy-btn" id="embedCopyBtn">Copy to clipboard</button>
       </div>
     </div>
   </div>
@@ -878,6 +935,7 @@
   </div>
 
   <div id="toast"></div>
+  <a class="embed-badge" id="embedBadge" style="display:none" target="_blank" rel="noopener">powered by litbin</a>
 
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -990,6 +1048,69 @@ int main(){
 }
 \`\`\`
 
+\`\`\`sort:cpp #countsort {numbers}
+// Counting sort — count occurrences, then place in order
+void counting_sort(std::vector<int>& a) {
+  if (a.empty()) return;
+  int mx = *std::max_element(a.begin(), a.end());
+  int mn = *std::min_element(a.begin(), a.end());
+  int range = mx - mn + 1;
+  std::vector<int> count(range, 0);
+  // Count occurrences — highlight each element as we read it
+  for (int i = 0; i < (int)a.size(); i++) {
+    count[a[i] - mn]++;
+    sort_print(a, {i}, {});
+  }
+  // Place elements back in sorted order
+  int idx = 0;
+  for (int i = 0; i < range; i++) {
+    while (count[i]-- > 0) {
+      a[idx] = i + mn;
+      sort_print(a, {}, {idx});
+      idx++;
+    }
+  }
+}
+int main() {
+  sort_print(numbers);
+  counting_sort(numbers);
+  sort_print(numbers);
+}
+\`\`\`
+
+\`\`\`sort:rust #mergesort {numbers}
+// Merge sort — divide and conquer
+fn merge(a: &mut Vec<i64>, lo: usize, mid: usize, hi: usize) {
+    let left: Vec<i64> = a[lo..=mid].to_vec();
+    let right: Vec<i64> = a[mid+1..=hi].to_vec();
+    let (mut i, mut j, mut k) = (0, 0, lo);
+    while i < left.len() && j < right.len() {
+        if left[i] <= right[j] {
+            a[k] = left[i]; i += 1;
+        } else {
+            a[k] = right[j]; j += 1;
+        }
+        sort_print(a, &[k], &[]);
+        k += 1;
+    }
+    while i < left.len() { a[k] = left[i]; sort_print(a, &[], &[k]); i += 1; k += 1; }
+    while j < right.len() { a[k] = right[j]; sort_print(a, &[], &[k]); j += 1; k += 1; }
+}
+fn merge_sort(a: &mut Vec<i64>, lo: usize, hi: usize) {
+    if lo >= hi { return; }
+    let mid = lo + (hi - lo) / 2;
+    merge_sort(a, lo, mid);
+    merge_sort(a, mid + 1, hi);
+    merge(a, lo, mid, hi);
+}
+fn main() {
+    sort_print(&numbers, &[], &[]);
+    let n = numbers.len();
+    merge_sort(&mut numbers, 0, n - 1);
+    sort_print(&numbers, &[], &[]);
+}
+\`\`\`
+
 ### Algorithm Comparison
 
 Click **▶ Visualize all** above, then compare the animations side by side:
@@ -1001,6 +1122,12 @@ Click **▶ Visualize all** above, then compare the animations side by side:
 \`\`\`
 
 \`\`\`viz:timsort "Timsort"
+\`\`\`
+
+\`\`\`viz:countsort "Counting Sort"
+\`\`\`
+
+\`\`\`viz:mergesort "Merge Sort (Rust)"
 \`\`\`
 
 ---
@@ -1173,10 +1300,12 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
     // ── Viewer mode ──────────────────────────────────────────────────────────
     let viewerMode = new URLSearchParams(location.search).has('view');
     let slidesAutoOpen = new URLSearchParams(location.search).has('slides');
+    const embedMode = new URLSearchParams(location.search).has('embed');
     const viewBtn = document.getElementById('viewBtn');
 
     function setHash(encoded) {
-      history.replaceState(null, '', (viewerMode ? '?view' : '') + '#' + encoded);
+      const params = viewerMode ? '?view' : embedMode ? location.search : '';
+      history.replaceState(null, '', params + '#' + encoded);
     }
 
     function applyViewer() {
@@ -1192,6 +1321,23 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
 
     viewBtn.addEventListener('click', () => { viewerMode = !viewerMode; applyViewer(); });
     applyViewer();
+
+    // ── Embed mode ────────────────────────────────────────────────────────────
+    function applyEmbed() {
+      if (!embedMode) return;
+      const themeParam = new URLSearchParams(location.search).get('theme');
+      if (themeParam === 'dark') { dark = true; applyTheme(); }
+      else if (themeParam === 'light') { dark = false; applyTheme(); }
+      document.body.classList.add('embed');
+      const badge = document.getElementById('embedBadge');
+      badge.href = location.origin + location.pathname + '?view' + location.hash;
+      badge.style.display = 'block';
+      function postHeight() {
+        window.parent.postMessage({ type: 'litbin-resize', height: document.documentElement.scrollHeight }, '*');
+      }
+      new ResizeObserver(postHeight).observe(document.getElementById('preview'));
+      setTimeout(postHeight, 500);
+    }
 
     // ── Excalidraw fold/unfold ────────────────────────────────────────────────
     let _drawingsFolded = false;
@@ -1559,14 +1705,20 @@ Maximum practical size: ~200 KB markdown. Warning at 500 KB encoded size, error 
         const myId = id;
         const myData = initialData;
         loadExcalidraw().then(({ React, createRoot, Excalidraw }) => {
-          let t;
-          function onChange(els, as) {
-            clearTimeout(t);
-            t = setTimeout(() => saveExcalidrawBack(myId, els, as), EXCALIDRAW_DEBOUNCE_MS);
+          const props = { initialData: myData };
+          if (embedMode) {
+            props.viewModeEnabled = true;
+          } else {
+            let t;
+            function onChange(els, as) {
+              clearTimeout(t);
+              t = setTimeout(() => saveExcalidrawBack(myId, els, as), EXCALIDRAW_DEBOUNCE_MS);
+            }
+            props.onChange = onChange;
           }
           const root = createRoot(mountPoint);
           entry.root = root;
-          root.render(React.createElement(Excalidraw, { initialData: myData, onChange }));
+          root.render(React.createElement(Excalidraw, props));
         }).catch(err => {
           mountPoint.textContent = 'Excalidraw failed to load: ' + err.message;
           mountPoint.style.cssText = 'color:#f85149;padding:16px;font-size:13px;display:flex;align-items:center;justify-content:center;height:100%;';
@@ -1679,10 +1831,6 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
 
     // ── Sync scroll ───────────────────────────────────────────────────────────
     let _syncScrollEnabled = false;
-    // Two-flag lock: each side sets its own flag while it is the driver, ignoring the
-    // other side's reactive events. Cleared with rAF so async scroll events are caught.
-    let _syncFromEditor = false;
-    let _syncFromPreview = false;
 
     function _syncEditorToPreview() {
       const eMax = editor.scrollHeight - editor.clientHeight;
@@ -1692,15 +1840,6 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
       preview.scrollTop = (editor.scrollTop / eMax) * pMax;
     }
 
-    function _syncPreviewToEditor() {
-      const pMax = preview.scrollHeight - preview.clientHeight;
-      if (pMax <= 0) return;
-      const eMax = editor.scrollHeight - editor.clientHeight;
-      if (eMax <= 0) return;
-      const e = (preview.scrollTop / pMax) * eMax;
-      editor.scrollTop = e;
-      lineNums.scrollTop = e;
-    }
     const _vizFrameStore = new Map();   // vizId → { frames }
 
     // ── Pyodide (client-side Python) ─────────────────────────────────────────
@@ -1823,6 +1962,18 @@ def _litbin_show_override():
         .filter(name => Object.prototype.hasOwnProperty.call(_litVars, name))
         .map(name => serializeLitVar(name, _litVars[name], lang))
         .join('\n');
+    }
+
+    // For Rust, `let` is invalid at module scope — inject vars inside fn main()
+    function assembleCode(varInjection, parts, lang) {
+      const code = parts.filter(Boolean).join('\n');
+      if (!varInjection) return code;
+      const l = lang.toLowerCase();
+      if (l === 'rust' || l === 'rs') {
+        const injected = code.replace(/fn\s+main\s*\(\s*\)\s*\{/, m => m + '\n' + varInjection);
+        if (injected !== code) return injected;
+      }
+      return [varInjection, code].filter(Boolean).join('\n');
     }
 
     const outputCache = new Map(); // key: lang+'\x00'+code → {className, innerHTML}
@@ -2118,7 +2269,7 @@ Click **Live** to enter Obsidian-style block editing. The document splits into b
       try {
         const varInjection = buildLitVarInjection(varRefs, lang);
         const userCode = spec.transform ? spec.transform(code) : code;
-        const finalCode = [varInjection, userCode].filter(Boolean).join('\n');
+        const finalCode = assembleCode(varInjection, [userCode], lang);
         const res = await fetch('https://wandbox.org/api/compile.json', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2758,7 +2909,7 @@ except (ImportError, Exception):
               const varInjection = buildLitVarInjection(varRefs, lang);
               const preamble = SORT_PREAMBLES[lang.toLowerCase()] || '';
               const userCode = spec.transform ? spec.transform(code) : code;
-              return [varInjection, preamble, userCode].filter(Boolean).join('\n');
+              return assembleCode(varInjection, [preamble, userCode], lang);
             })(),
             options: spec.options,
             ...(spec.rawOptions ? { 'compiler-option-raw': spec.rawOptions } : {}),
@@ -2850,17 +3001,12 @@ except (ImportError, Exception):
     editor.addEventListener('input', updateLineNums);
     editor.addEventListener('scroll', () => {
       lineNums.scrollTop = editor.scrollTop;
-      if (!_syncScrollEnabled || _syncFromPreview) return;
-      _syncFromEditor = true;
-      _syncEditorToPreview();
-      requestAnimationFrame(() => { _syncFromEditor = false; });
+      if (_syncScrollEnabled) _syncEditorToPreview();
     });
 
     preview.addEventListener('scroll', () => {
-      if (!_syncScrollEnabled || _syncFromEditor) return;
-      _syncFromPreview = true;
-      _syncPreviewToEditor();
-      requestAnimationFrame(() => { _syncFromPreview = false; });
+      // One-directional: editor drives preview. Preview scroll does NOT
+      // drive editor — prevents feedback-loop drift.
     });
 
     new ResizeObserver(updateLineNums).observe(editor);
@@ -2979,6 +3125,7 @@ except (ImportError, Exception):
       if (hasExcalidrawBlocks(editor.value)) foldDrawings();
       render();
       if (!_showingDefault) { try { updateSize(hash); } catch(e) {} }
+      if (embedMode) applyEmbed();
       if (slidesAutoOpen) applySlidesMode();
     })();
 
@@ -3159,6 +3306,37 @@ except (ImportError, Exception):
       shortBtn.textContent = 'Short URL';
     });
 
+    // ── Embed modal ───────────────────────────────────────────────────────────
+    const embedModalEl     = document.getElementById('embedModal');
+    const embedCloseEl     = document.getElementById('embedClose');
+    const embedSnippetEl   = document.getElementById('embedSnippet');
+    const embedThemeSelect = document.getElementById('embedThemeSelect');
+    const embedCopyBtn     = document.getElementById('embedCopyBtn');
+    const embedBtn         = document.getElementById('embedBtn');
+
+    function generateEmbedSnippet() {
+      const theme = embedThemeSelect.value;
+      const params = '?embed' + (theme ? '&theme=' + theme : '');
+      const src = location.origin + location.pathname + params + location.hash;
+      return `<iframe src="${src}" style="width:100%;border:none;overflow:hidden;" sandbox="allow-scripts allow-same-origin allow-popups" loading="lazy" id="litbin-embed"></iframe>
+<script>window.addEventListener('message',e=>{if(e.data&&e.data.type==='litbin-resize'){document.getElementById('litbin-embed').style.height=e.data.height+'px';}});<\/script>`;
+    }
+
+    function openEmbedModal() {
+      embedSnippetEl.value = generateEmbedSnippet();
+      embedModalEl.style.display = 'flex';
+    }
+
+    embedBtn.addEventListener('click', openEmbedModal);
+    embedCloseEl.addEventListener('click', () => { embedModalEl.style.display = 'none'; });
+    embedModalEl.addEventListener('mousedown', e => { if (e.target === embedModalEl) embedModalEl.style.display = 'none'; });
+    embedThemeSelect.addEventListener('change', () => { embedSnippetEl.value = generateEmbedSnippet(); });
+    embedCopyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(embedSnippetEl.value)
+        .then(() => showToast('Embed snippet copied to clipboard'))
+        .catch(() => showToast('Copy failed'));
+    });
+
     // ── Import ───────────────────────────────────────────────────────────────
     const importBtn  = document.getElementById('importBtn');
     const importFile = document.getElementById('importFile');
@@ -3336,6 +3514,7 @@ except (ImportError, Exception):
     function renderLive() {
       _rendering = true;
       liveContent.classList.remove('has-viz-inline');
+      _masterVizMap.delete(liveContent);
       liveContent.innerHTML = '';
 
       liveSegs.forEach((seg, i) => {
@@ -3581,6 +3760,7 @@ except (ImportError, Exception):
         { label: 'Toggle theme',             icon: '◑',  action: () => themeBtn.click() },
         { label: 'Open docs',                icon: '?',  action: () => docsBtn.click() },
         { label: 'Share / copy URL',         icon: '↗',  action: () => shareBtn.click() },
+        { label: 'Embed / get iframe code', icon: '</>', action: () => { closePalette(); openEmbedModal(); } },
         { label: 'Switch to Split view',     icon: '⊟',  action: () => modeBtn.click() },
       ]},
     ];
