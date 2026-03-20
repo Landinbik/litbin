@@ -1678,68 +1678,27 @@ fn sort_print<T:std::fmt::Display>(a:&[T],compare:&[usize],swap:&[usize]){let c:
 
     // ── Sync scroll ───────────────────────────────────────────────────────────
     let _syncScrollEnabled = false;
-    let _syncScrollMap = null;  // [{e: editorPx, p: previewPx}, ...] sorted by e
-    let _syncScrollLock = false;
+    // Two-flag lock: each side sets its own flag while it is the driver, ignoring the
+    // other side's reactive events. Cleared with rAF so async scroll events are caught.
+    let _syncFromEditor = false;
+    let _syncFromPreview = false;
 
-    function buildSyncScrollMap() {
-      if (!_syncScrollEnabled) return;
-      const lines = editor.value.split('\n');
-      const totalLines = lines.length;
-      if (totalLines === 0) { _syncScrollMap = null; return; }
-
-      // Find block-start line indices (non-empty line after blank or at start, skip inside fences)
-      const blockLines = [];
-      let inFence = false;
-      for (let i = 0; i < totalLines; i++) {
-        if (/^`{3}/.test(lines[i])) inFence = !inFence;
-        if (!inFence && lines[i].trim() !== '' && (i === 0 || lines[i - 1].trim() === '')) {
-          blockLines.push(i);
-        }
-      }
-
-      // Preview first-level children (skip ui overlays)
-      const previewEls = Array.from(preview.children).filter(el =>
-        !el.classList.contains('action-buttons') && el.offsetHeight > 0
-      );
-
-      const editorMax = Math.max(1, editor.scrollHeight - editor.clientHeight);
-      const previewMax = Math.max(1, preview.scrollHeight - preview.clientHeight);
-      const lineSpans = lineNums.children; // per-line height spans, offsetTop = px offset of each line
-
-      const map = [{ e: 0, p: 0 }];
-
-      const count = Math.min(blockLines.length, previewEls.length);
-      for (let i = 0; i < count; i++) {
-        const li = blockLines[i];
-        // Editor pixel offset: use lineNums span for accurate word-wrap height
-        const eTop = (lineSpans[li] ? lineSpans[li].offsetTop : (li / totalLines) * editor.scrollHeight);
-
-        // Preview element pixel offset relative to preview scroll container
-        const previewRect = preview.getBoundingClientRect();
-        const elRect = previewEls[i].getBoundingClientRect();
-        const pTop = elRect.top - previewRect.top + preview.scrollTop;
-
-        map.push({ e: Math.min(eTop, editorMax), p: Math.min(pTop, previewMax) });
-      }
-
-      map.push({ e: editorMax, p: previewMax });
-
-      // Sort by editor position, remove duplicate e values
-      _syncScrollMap = map
-        .sort((a, b) => a.e - b.e)
-        .filter((v, i, arr) => i === 0 || v.e > arr[i - 1].e);
+    function _syncEditorToPreview() {
+      const eMax = editor.scrollHeight - editor.clientHeight;
+      if (eMax <= 0) return;
+      const pMax = preview.scrollHeight - preview.clientHeight;
+      if (pMax <= 0) return;
+      preview.scrollTop = (editor.scrollTop / eMax) * pMax;
     }
 
-    function _syncInterpolate(map, fromKey, toKey, val) {
-      for (let i = 0; i < map.length - 1; i++) {
-        const a = map[i], b = map[i + 1];
-        if (val <= b[fromKey]) {
-          const range = b[fromKey] - a[fromKey];
-          const t = range > 0 ? (val - a[fromKey]) / range : 0;
-          return a[toKey] + t * (b[toKey] - a[toKey]);
-        }
-      }
-      return map[map.length - 1][toKey];
+    function _syncPreviewToEditor() {
+      const pMax = preview.scrollHeight - preview.clientHeight;
+      if (pMax <= 0) return;
+      const eMax = editor.scrollHeight - editor.clientHeight;
+      if (eMax <= 0) return;
+      const e = (preview.scrollTop / pMax) * eMax;
+      editor.scrollTop = e;
+      lineNums.scrollTop = e;
     }
     const _vizFrameStore = new Map();   // vizId → { frames }
 
@@ -2890,20 +2849,17 @@ except (ImportError, Exception):
     editor.addEventListener('input', updateLineNums);
     editor.addEventListener('scroll', () => {
       lineNums.scrollTop = editor.scrollTop;
-      if (!_syncScrollEnabled || _syncScrollLock || !_syncScrollMap) return;
-      const p = _syncInterpolate(_syncScrollMap, 'e', 'p', editor.scrollTop);
-      _syncScrollLock = true;
-      preview.scrollTop = p;
-      setTimeout(() => { _syncScrollLock = false; }, 50);
+      if (!_syncScrollEnabled || _syncFromPreview) return;
+      _syncFromEditor = true;
+      _syncEditorToPreview();
+      requestAnimationFrame(() => { _syncFromEditor = false; });
     });
 
     preview.addEventListener('scroll', () => {
-      if (!_syncScrollEnabled || _syncScrollLock || !_syncScrollMap) return;
-      const e = _syncInterpolate(_syncScrollMap, 'p', 'e', preview.scrollTop);
-      _syncScrollLock = true;
-      editor.scrollTop = e;
-      lineNums.scrollTop = e;
-      setTimeout(() => { _syncScrollLock = false; }, 50);
+      if (!_syncScrollEnabled || _syncFromEditor) return;
+      _syncFromPreview = true;
+      _syncPreviewToEditor();
+      requestAnimationFrame(() => { _syncFromPreview = false; });
     });
 
     new ResizeObserver(updateLineNums).observe(editor);
@@ -2936,8 +2892,6 @@ except (ImportError, Exception):
       updateLineNums();
       addActionButtons(preview);
       hydrateVizRefs(preview);
-      // Rebuild after layout settles (mermaid/excalidraw may resize asynchronously)
-      if (_syncScrollEnabled) requestAnimationFrame(buildSyncScrollMap);
     }
 
     function addActionButtons(container) {
@@ -2997,8 +2951,6 @@ except (ImportError, Exception):
     syncScrollCb.addEventListener('change', () => {
       _syncScrollEnabled = syncScrollCb.checked;
       localStorage.setItem('litbin-syncscroll', _syncScrollEnabled ? '1' : '0');
-      if (_syncScrollEnabled) buildSyncScrollMap();
-      else _syncScrollMap = null;
     });
 
     function updateWordCount() {
@@ -3847,7 +3799,6 @@ except (ImportError, Exception):
       liveHandleObserver = new MutationObserver(() => requestAnimationFrame(positionHandles));
       liveHandleObserver.observe(livePane, { attributes: true, attributeFilter: ['style'] });
       window.addEventListener('resize', positionHandles);
-      window.addEventListener('resize', () => { if (_syncScrollEnabled) buildSyncScrollMap(); });
       livePane.addEventListener('scroll', positionHandles);
 
       let resizing = null;
